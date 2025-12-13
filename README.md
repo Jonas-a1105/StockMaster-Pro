@@ -1,3 +1,4 @@
+
 # 📦 Sistema de Gestión de Inventario & POS (SaaS)
 
 Un sistema completo de gestión de inventario y Punto de Venta (POS) basado en la web, diseñado con arquitectura **MVC** y modelo de negocio **SaaS (Software as a Service)**. Incluye gestión de planes (Free/Premium), facturación, reportes financieros y herramientas administrativas.
