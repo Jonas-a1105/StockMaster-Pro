@@ -1,0 +1,14 @@
+{
+    "name": "tu-usuario/sistema-inventario",
+    "description": "Un sistema de gestión de inventario.",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "require": {
+        "phpmailer/phpmailer": "^7.0",
+        "vlucas/phpdotenv": "^5.6"
+    }
+}

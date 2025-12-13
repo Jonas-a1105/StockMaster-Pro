@@ -1,0 +1,72 @@
+{
+  "name": "stockmaster-pro-desktop",
+  "productName": "StockMaster Pro",
+  "version": "1.0.0",
+  "description": "StockMaster Pro - Sistema de Gestión Empresarial",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "author": "StockMaster Solutions",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "electron-updater": "^6.1.7"
+  },
+  "build": {
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Jonas-a1105",
+        "repo": "StockMaster-Pro"
+      }
+    ],
+    "appId": "com.stockmaster.pro",
+    "win": {
+      "target": "nsis",
+      "icon": "public/img/StockMasterPro.ico",
+      "verifyUpdateCodeSignature": false,
+      "forceCodeSigning": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "StockMaster Pro",
+      "installerIcon": "public/img/StockMasterPro.ico",
+      "uninstallerIcon": "public/img/StockMasterPro.ico",
+      "installerHeaderIcon": "public/img/StockMasterPro.ico",
+      "deleteAppDataOnUninstall": true,
+      "license": "LICENSE.txt"
+    },
+    "asarUnpack": [
+      "src/**/*",
+      "public/**/*",
+      "views/**/*",
+      "vendor/**/*",
+      "database/**/*"
+    ],
+    "files": [
+      "**/*",
+      "!**/*.ts",
+      "!*.map",
+      "!package-lock.json",
+      "!README*.md",
+      "!inspect_schema.php",
+      "!add_codigo_column.php"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/bin",
+        "to": "bin"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  }
+}

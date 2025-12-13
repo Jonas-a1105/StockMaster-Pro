@@ -1,0 +1,40 @@
+Login successful for user: Jonas
+Post Data: Array
+(
+    [username] => Jonas
+    [password] => 123
+    [remember] => on
+)
+
+Remember Me CHECKED. Setting cookie...
+Cookie set result: TRUE
+Login successful for user: Jonas
+Post Data: Array
+(
+    [username] => Jonas
+    [password] => 123
+    [remember] => on
+)
+
+Remember Me CHECKED. Setting cookie...
+Cookie set result: TRUE
+Login successful for user: Jonas
+Post Data: Array
+(
+    [username] => Jonas
+    [password] => 123
+    [remember] => on
+)
+
+Remember Me CHECKED. Setting cookie...
+Setting Cookie: Expiry=2026-01-12 21:34:44 (1768250084). Result=TRUE
+Login successful for user: Jonas
+Post Data: Array
+(
+    [username] => Jonas
+    [password] => 123
+    [remember] => on
+)
+
+Remember Me CHECKED. Setting cookie...
+Setting Cookie: Expiry=2026-01-12 21:36:39 (1768250199). Result=TRUE

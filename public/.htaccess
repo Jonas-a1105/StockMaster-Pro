@@ -1,0 +1,30 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    Options -MultiViews
+    RewriteBase /inventario_oop/public/
+    # Excluir carpetas de estáticos de la reescritura (Siempre primero)
+    RewriteRule ^(css|js|img|fonts|favicon\.ico) - [L,NC]
+
+    # Redirigir todo lo demás al index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule mod_deflate.c>
+    # Comprimir HTML, CSS, JS, y JSON antes de enviarlos
+    # Esto reduce el peso de los archivos hasta un 70%
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json
+</IfModule>
+
+<IfModule mod_expires.c>
+    # Activar caché del navegador
+    ExpiresActive On
+    # Las imágenes se guardan 1 mes en el navegador del cliente
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    # El CSS y JS se guardan 1 semana
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+</IfModule>

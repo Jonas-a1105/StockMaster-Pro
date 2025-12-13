@@ -1,0 +1,129 @@
+/**
+ * =========================================================================
+ * TABLAS - Sistema de Inventario
+ * =========================================================================
+ */
+
+.table-container {
+    overflow-x: auto;
+    border-radius: var(--border-radius-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-secondary);
+}
+
+/* === CELDAS === */
+th,
+td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+thead th {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+tbody tr {
+    background: rgba(255, 255, 255, 0.5);
+    transition: background var(--transition-fast);
+}
+
+tbody tr:hover {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* === ALINEACIÓN === */
+th.text-center,
+td.text-center {
+    text-align: center;
+}
+
+th.text-right,
+td.text-right {
+    text-align: right;
+}
+
+/* === FOOTER DE TABLA === */
+tfoot tr {
+    background-color: var(--dark-color);
+    color: var(--text-light);
+    font-weight: bold;
+}
+
+tfoot td {
+    border-bottom: none;
+}
+
+/* === ESTILOS DE STOCK === */
+.stock-bajo {
+    color: var(--warning-color);
+    font-weight: bold;
+}
+
+.stock-agotado {
+    color: var(--danger-color);
+    font-weight: bold;
+}
+
+/* === ESTILOS DE MOVIMIENTOS === */
+.movimiento-entrada {
+    color: var(--success-color);
+    font-weight: bold;
+}
+
+.movimiento-salida {
+    color: var(--danger-color);
+    font-weight: bold;
+}
+
+/* === CELDAS CON FONDO === */
+td.bg-danger-light {
+    background: var(--danger-light);
+}
+
+td.bg-success-light {
+    background: var(--success-light);
+}
+
+td.bg-primary-light {
+    background: var(--primary-light);
+}
+
+/* === BADGES EN TABLA === */
+table .badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+}
+
+table .badge.bg-info {
+    background-color: var(--info-color);
+    color: white;
+}
+
+/* === TABLA RESPONSIVA === */
+@media (max-width: 768px) {
+
+    th,
+    td {
+        padding: 8px 10px;
+        font-size: var(--font-size-sm);
+    }
+}

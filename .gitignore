@@ -1,0 +1,36 @@
+
+# Dependencias
+/node_modules
+/vendor
+
+# Builds y Distribución
+/dist
+/release
+/build
+
+# Entorno y Configuración
+.env
+config/database.php
+
+# Base de datos local
+*.sqlite
+*.db
+database/database.sqlite
+database/*.sqlite
+
+# Logs y Temporales
+/storage/logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sistema Operativo
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode
+.idea
+*.sublime-project
+*.sublime-workspace

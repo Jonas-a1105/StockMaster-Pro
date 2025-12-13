@@ -1,0 +1,28 @@
+ACUERDO DE LICENCIA DE USUARIO FINAL (EULA) PARA STOCKMASTER PRO
+
+IMPORTANTE: POR FAVOR, LEA ESTE CONTRATO CUIDADOSAMENTE.
+
+Este Acuerdo de Licencia de Usuario Final ("EULA") es un acuerdo legal entre usted (ya sea un individuo o una sola entidad) y StockMaster Solutions con respecto al software "StockMaster Pro" (el "SOFTWARE").
+
+AL INSTALAR, COPIAR O UTILIZAR DE CUALQUIER OTRA MANERA EL SOFTWARE, USTED ACEPTA ESTAR OBLIGADO POR LOS TÉRMINOS DE ESTE EULA. SI NO ACEPTA LOS TÉRMINOS DE ESTE EULA, NO INSTALE NI UTILICE EL SOFTWARE.
+
+1. CONCESIÓN DE LICENCIA
+StockMaster Solutions le otorga una licencia revocable, no exclusiva, intransferible y limitada para descargar, instalar y utilizar el Software estrictamente de acuerdo con los términos de este Acuerdo.
+
+2. RESTRICCIONES
+Usted se compromete a no, y no permitirá que otros:
+a) Licencien, vendan, alquilen, arrienden, asignen, distribuyan, transmitan, alojen, subcontraten, divulguen o exploten comercialmente el Software.
+b) Modifiquen, realicen trabajos derivados, desensamblen, descifren, compilen inversamente o realicen ingeniería inversa de cualquier parte del Software.
+c) Eliminen, alteren u oculten cualquier aviso de propiedad (incluyendo cualquier aviso de derechos de autor o marca registrada) de StockMaster Solutions.
+
+3. PROPIEDAD INTELECTUAL
+El Software, incluyendo sin limitación todos los derechos de autor, patentes, marcas registradas, secretos comerciales y otros derechos de propiedad intelectual son, y seguirán siendo, propiedad única y exclusiva de StockMaster Solutions.
+
+4. TERMINACIÓN
+Este Acuerdo es efectivo hasta que sea terminado por usted o StockMaster Solutions. Sus derechos bajo este Acuerdo terminarán automáticamente si usted incumple cualquiera de sus términos.
+
+5. RENUNCIA DE GARANTÍA
+EL SOFTWARE SE PROPORCIONA "TAL CUAL", SIN GARANTÍA DE NINGÚN TIPO. STOCKMASTER SOLUTIONS RENUNCIA A TODAS LAS GARANTÍAS, EXPRESAS O IMPLÍCITAS.
+
+Copyright (c) 2025 StockMaster Solutions.
+Todos los derechos reservados.

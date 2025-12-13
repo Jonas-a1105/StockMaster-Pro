@@ -1,0 +1,214 @@
+/**
+ * =========================================================================
+ * TARJETAS Y KPIs - Sistema de Inventario
+ * =========================================================================
+ */
+
+/* === SECCIÓN GLASS (CONTENEDOR PRINCIPAL) === */
+.glass-section {
+    background: var(--glass-bg);
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--glass-border);
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-xxl);
+    box-shadow: var(--glass-shadow);
+    box-sizing: border-box;
+}
+
+/* === TARJETA GLASS === */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--glass-border);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow);
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.glass-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* === GRID DE DASHBOARD === */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xxl);
+}
+
+/* === TARJETA KPI === */
+.kpi-card {
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    text-align: center;
+    border: 1px solid var(--border-color);
+    transition: transform var(--transition);
+    box-sizing: border-box;
+}
+
+.kpi-card:hover {
+    transform: scale(1.05);
+}
+
+.kpi-card i {
+    font-size: 2em;
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-sm);
+    display: block;
+}
+
+.kpi-card h3 {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.kpi-card p {
+    margin: 0;
+    font-size: 2em;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* === GRID DE TARJETAS DE CLIENTES === */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+}
+
+/* === TARJETA DE CLIENTE === */
+.client-card {
+    background: var(--glass-bg);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow);
+    transition: transform var(--transition);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.client-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.client-card h3 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-sm);
+    font-size: var(--font-size-xl);
+    color: var(--primary-color);
+}
+
+.client-card p {
+    margin: var(--spacing-xs) 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.client-actions {
+    margin-top: var(--spacing-md);
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+/* === TARJETA DE TOTAL (POS) === */
+.total-card {
+    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%) !important;
+    color: var(--text-light) !important;
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    text-align: right;
+    margin-bottom: var(--spacing-lg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.total-card h3 {
+    color: #a0aec0 !important;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: var(--spacing-xs);
+    margin-top: 0;
+}
+
+.total-amount-usd {
+    color: #ffffff !important;
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.total-amount-ves {
+    color: #48bb78 !important;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-top: var(--spacing-xs);
+}
+
+/* === GRID DE GRÁFICOS === */
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.chart-container {
+    position: relative;
+    height: 350px;
+    width: 100%;
+    padding: var(--spacing-sm);
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* === TASA DE CAMBIO === */
+.rate-info-box {
+    background: linear-gradient(135deg, #f7f7f7, #e9ecef);
+    border: 1px solid #ced4da;
+    border-radius: var(--border-radius);
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.rate-info-box .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.rate-info-box .info-label {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.rate-info-box .info-value {
+    font-weight: bold;
+    color: var(--info-color);
+}
+
+.rate-info-box .info-source {
+    font-size: var(--font-size-xs);
+    color: var(--secondary-color);
+    font-style: italic;
+}

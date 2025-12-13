@@ -1,0 +1,81 @@
+/**
+ * =========================================================================
+ * TEMA OSCURO - Sistema de Inventario
+ * =========================================================================
+ * Estilos adicionales para el modo oscuro
+ */
+
+/* === TRANSICIONES SUAVES === */
+body,
+.container,
+nav,
+.glass-card,
+.glass-section,
+.form-control,
+input,
+select,
+table,
+th,
+tr,
+.modal-content {
+    transition: background-color var(--transition), color var(--transition), border-color var(--transition);
+}
+
+/* === TEMA OSCURO: ELEMENTOS ESPECÍFICOS === */
+[data-theme="dark"] table {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] th {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] tr:hover {
+    background: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4 {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .glass-card,
+[data-theme="dark"] .glass-section,
+[data-theme="dark"] .card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .kpi-card {
+    background: rgba(30, 41, 59, 0.6);
+}
+
+[data-theme="dark"] tbody tr {
+    background: rgba(30, 41, 59, 0.5);
+}
+
+[data-theme="dark"] .floating-toolbar {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .rate-info-box {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .rate-info-box .info-label {
+    color: var(--text-primary);
+}

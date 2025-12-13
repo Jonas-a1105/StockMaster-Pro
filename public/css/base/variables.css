@@ -1,0 +1,113 @@
+/**
+ * =========================================================================
+ * VARIABLES CSS - Sistema de Inventario
+ * =========================================================================
+ * Variables globales para colores, espaciado, tipografías y efectos.
+ */
+
+:root {
+    /* === COLORES PRIMARIOS === */
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+    --primary-light: rgba(0, 123, 255, 0.1);
+    
+    /* === COLORES SEMÁNTICOS === */
+    --success-color: #28a745;
+    --success-hover: #1e7e34;
+    --success-light: rgba(40, 167, 69, 0.1);
+    
+    --danger-color: #dc3545;
+    --danger-hover: #c82333;
+    --danger-light: rgba(220, 53, 69, 0.1);
+    
+    --warning-color: #ffc107;
+    --warning-hover: #e0a800;
+    --warning-light: rgba(255, 193, 7, 0.1);
+    
+    --info-color: #17a2b8;
+    --info-hover: #138496;
+    --info-light: rgba(23, 162, 184, 0.1);
+    
+    /* === COLORES NEUTROS === */
+    --secondary-color: #6c757d;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+    
+    /* === COLORES DE TEXTO === */
+    --text-primary: #333333;
+    --text-secondary: #555555;
+    --text-muted: #999999;
+    --text-light: #ffffff;
+    
+    /* === COLORES DE FONDO (TEMA CLARO) === */
+    --bg-primary: #f5f7fa;
+    --bg-secondary: #ffffff;
+    --bg-card: rgba(255, 255, 255, 0.95);
+    --bg-input: rgba(255, 255, 255, 0.8);
+    
+    /* === EFECTOS GLASSMORPHISM === */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --backdrop-blur: blur(10px);
+    
+    /* === BORDES === */
+    --border-color: rgba(0, 0, 0, 0.1);
+    --border-radius-sm: 5px;
+    --border-radius: 8px;
+    --border-radius-lg: 15px;
+    --border-radius-pill: 50px;
+    
+    /* === SOMBRAS === */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 25px rgba(0, 0, 0, 0.15);
+    --shadow-hover: 0 5px 15px rgba(0, 0, 0, 0.1);
+    
+    /* === ESPACIADO === */
+    --spacing-xs: 5px;
+    --spacing-sm: 10px;
+    --spacing-md: 15px;
+    --spacing-lg: 20px;
+    --spacing-xl: 25px;
+    --spacing-xxl: 30px;
+    
+    /* === TIPOGRAFÍA === */
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-size-xs: 0.75em;
+    --font-size-sm: 0.85em;
+    --font-size-base: 1em;
+    --font-size-lg: 1.1em;
+    --font-size-xl: 1.25em;
+    --font-size-xxl: 1.5em;
+    
+    /* === TRANSICIONES === */
+    --transition-fast: 0.2s ease;
+    --transition: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* === Z-INDEX === */
+    --z-dropdown: 100;
+    --z-sticky: 500;
+    --z-modal-backdrop: 1000;
+    --z-modal: 1001;
+    --z-notification: 9999;
+}
+
+/* === TEMA OSCURO === */
+[data-theme="dark"] {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-card: rgba(30, 41, 59, 0.95);
+    --bg-input: #1e293b;
+    
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    
+    --glass-bg: rgba(30, 41, 59, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    
+    --border-color: #334155;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+}

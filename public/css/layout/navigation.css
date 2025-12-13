@@ -1,0 +1,136 @@
+/**
+ * =========================================================================
+ * NAVEGACIÓN - Sistema de Inventario
+ * =========================================================================
+ */
+
+nav {
+    background: var(--glass-bg);
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--glass-border);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-xxl);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    box-shadow: var(--glass-shadow);
+    position: relative;
+    z-index: var(--z-sticky);
+}
+
+/* === BOTÓN DE NAVEGACIÓN === */
+.nav-btn {
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    text-decoration: none;
+}
+
+.nav-btn:hover,
+.nav-btn.active {
+    background: rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+    text-decoration: none;
+}
+
+/* === CONTROLES DE NAVEGACIÓN === */
+.nav-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-left: auto;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: var(--border-radius);
+}
+
+.nav-controls input {
+    padding: var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    background: rgba(255, 255, 255, 0.8);
+    font-size: var(--font-size-sm);
+}
+
+.nav-controls input::placeholder {
+    font-size: var(--font-size-xs);
+}
+
+/* === BADGES EN NAVEGACIÓN === */
+.nav-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: 20px;
+    font-size: var(--font-size-sm);
+    font-weight: bold;
+    box-shadow: var(--shadow-sm);
+}
+
+.nav-badge.premium {
+    background-color: gold;
+    color: var(--dark-color);
+}
+
+.nav-badge.trial {
+    color: white;
+}
+
+.nav-badge.trial-ok {
+    background-color: var(--success-color);
+}
+
+.nav-badge.trial-warning {
+    background-color: var(--danger-color);
+}
+
+/* === TEMA OSCURO === */
+[data-theme="dark"] nav {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+    border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .nav-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .nav-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* === RESPONSIVO === */
+@media (max-width: 768px) {
+    nav {
+        padding: var(--spacing-sm);
+        gap: var(--spacing-xs);
+    }
+
+    .nav-btn {
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: var(--font-size-sm);
+    }
+
+    .nav-controls {
+        flex-wrap: wrap;
+        margin-left: 0;
+        width: 100%;
+        justify-content: center;
+    }
+}
