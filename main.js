@@ -52,15 +52,29 @@ function setupAutoUpdater() {
 
 // ... (createWindow function)
 
-app.whenReady().then(async () => {
-    try {
-        await startPHPServer();
-        createWindow();
-        setupAutoUpdater(); // Initialize Updater
-    } catch (e) {
-        console.error('Failed to start:', e);
-    }
-});
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+    app.quit();
+} else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        // Someone tried to run a second instance, we should focus our window.
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+        }
+    });
+
+    app.whenReady().then(async () => {
+        try {
+            await startPHPServer();
+            createWindow();
+            setupAutoUpdater(); // Initialize Updater
+        } catch (e) {
+            console.error('Failed to start:', e);
+        }
+    });
+}
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');

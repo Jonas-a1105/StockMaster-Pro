@@ -1,7 +1,7 @@
 {
   "name": "stockmaster-pro-desktop",
   "productName": "StockMaster Pro",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "StockMaster Pro - Sistema de Gestión Empresarial",
   "main": "main.js",
   "scripts": {
