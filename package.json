@@ -1,7 +1,7 @@
 {
   "name": "stockmaster-pro-desktop",
   "productName": "StockMaster Pro",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "StockMaster Pro - Sistema de Gestión Empresarial",
   "main": "main.js",
   "scripts": {
@@ -34,9 +34,10 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
+      "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "StockMaster Pro",
+      "runAfterFinish": true,
       "installerIcon": "public/img/StockMasterPro.ico",
       "uninstallerIcon": "public/img/StockMasterPro.ico",
       "installerHeaderIcon": "public/img/StockMasterPro.ico",
@@ -67,6 +68,7 @@
     ]
   },
   "dependencies": {
+    "electron-log": "^5.4.3",
     "electron-updater": "^6.6.2"
   }
 }

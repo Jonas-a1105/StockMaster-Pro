@@ -3,15 +3,40 @@ const { autoUpdater } = require('electron-updater');
 
 // ... (rest of imports)
 
+const log = require('electron-log');
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = 'info';
+
 // --- AUTO UPDATE LOGIC ---
 function setupAutoUpdater() {
+    log.info('App starting...');
     autoUpdater.checkForUpdatesAndNotify();
 
-    autoUpdater.on('update-available', () => {
-        console.log('Update available.');
+    autoUpdater.on('checking-for-update', () => {
+        log.info('Checking for update...');
     });
 
-    autoUpdater.on('update-downloaded', () => {
+    autoUpdater.on('update-available', (info) => {
+        log.info('Update available.', info);
+    });
+
+    autoUpdater.on('update-not-available', (info) => {
+        log.info('Update not available.', info);
+    });
+
+    autoUpdater.on('error', (err) => {
+        log.error('Error in auto-updater. ' + err);
+    });
+
+    autoUpdater.on('download-progress', (progressObj) => {
+        let log_message = "Download speed: " + progressObj.bytesPerSecond;
+        log_message = log_message + ' - Downloaded ' + progressObj.percent + '%';
+        log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
+        log.info(log_message);
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+        log.info('Update downloaded', info);
         dialog.showMessageBox(mainWindow, {
             type: 'info',
             buttons: ['Reiniciar e Instalar', 'Más tarde'],
@@ -157,6 +182,21 @@ function createWindow() {
 
     mainWindow.loadURL(`http://${HOST}:${PHP_PORT}`);
 
+    mainWindow.on('close', (e) => {
+        const choice = dialog.showMessageBoxSync(mainWindow, {
+            type: 'question',
+            buttons: ['Sí', 'No'],
+            title: 'Confirmar Salida',
+            message: '¿Estás seguro de que quieres salir de la aplicación?',
+            defaultId: 0,
+            cancelId: 1
+        });
+
+        if (choice === 1) {
+            e.preventDefault();
+        }
+    });
+
     mainWindow.on('closed', () => {
         mainWindow = null;
     });
@@ -180,6 +220,12 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
     if (phpServer) {
-        phpServer.kill();
+        // Aggressive kill for Windows
+        if (process.platform === 'win32') {
+            const { exec } = require('child_process');
+            exec(`taskkill /pid ${phpServer.pid} /T /F`);
+        } else {
+            phpServer.kill();
+        }
     }
 });

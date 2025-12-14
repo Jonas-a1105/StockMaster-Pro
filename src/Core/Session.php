@@ -5,6 +5,10 @@ class Session {
 
     public static function init() {
         if (session_status() == PHP_SESSION_NONE) {
+            if (!is_dir(sys_get_temp_dir())) {
+                mkdir(sys_get_temp_dir(), 0777, true);
+            }
+            session_save_path(sys_get_temp_dir());
             session_start();
         }
     }

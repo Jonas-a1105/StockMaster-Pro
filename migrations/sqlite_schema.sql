@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS "usuarios" (
   "empresa_telefono" TEXT DEFAULT NULL,
   "empresa_logo" TEXT DEFAULT NULL,
   "rol" TEXT NOT NULL DEFAULT 'usuario', -- enum: usuario, admin
+  "remember_token" TEXT DEFAULT NULL,
   "fecha_registro" DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "idx_username" ON "usuarios" ("username");
@@ -55,6 +56,7 @@ CREATE INDEX IF NOT EXISTS "idx_client_user_id" ON "clientes" ("user_id");
 -- 4. Tabla: productos
 CREATE TABLE IF NOT EXISTS "productos" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+  "codigo" TEXT DEFAULT NULL,
   "codigo_barras" TEXT DEFAULT NULL,
   "user_id" INTEGER NOT NULL,
   "nombre" TEXT NOT NULL,

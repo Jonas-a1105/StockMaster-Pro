@@ -1,14 +1,14 @@
 <?php
 // Obtener datos de la empresa y usuario
 $db = \App\Core\Database::conectar();
-$stmt = $db->prepare("SELECT email, empresa_nombre, empresa_direccion, empresa_telefono, empresa_logo FROM usuarios WHERE id = ?");
+$stmt = $db->prepare("SELECT username, email, empresa_nombre, empresa_direccion, empresa_telefono, empresa_logo FROM usuarios WHERE id = ?");
 $stmt->execute([$_SESSION['user_id']]);
 $usuario = $stmt->fetch();
 
 $nombreEmpresa = !empty($usuario['empresa_nombre']) ? $usuario['empresa_nombre'] : 'MI NEGOCIO';
 $direccion = !empty($usuario['empresa_direccion']) ? $usuario['empresa_direccion'] : 'Dirección no configurada';
 $telefono = !empty($usuario['empresa_telefono']) ? $usuario['empresa_telefono'] : '';
-$nombreUsuario = $usuario['email'] ?? 'Usuario';
+$nombreUsuario = $usuario['username'] ?? $usuario['email'] ?? 'Usuario';
 $empresa = $usuario; 
 
 // Obtener cliente
@@ -254,20 +254,24 @@ if (!empty($venta['cliente_id'])) {
                 <tr>
                     <th>Desc</th>
                     <th class="qty">Cant</th>
-                    <th class="price">$Unit</th>
-                    <th class="total">$Tot</th>
+                    <th class="price">Bs.Unit</th>
+                    <th class="total">Bs.Tot</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($items as $item):
-                $precioUnitario = (float)($item['precio_unitario'] ?? 0);
-                $subtotalItem = (float)($item['subtotal'] ?? 0);
+                $precioUnitarioUSD = (float)($item['precio_unitario_usd'] ?? 0);
+                $tasa = (float)($venta['tasa_ves'] ?? 0);
+                
+                // Calcular en Bs
+                $precioUnitarioBs = $precioUnitarioUSD * $tasa;
+                $subtotalItemBs = $precioUnitarioBs * ($item['cantidad'] ?? 1);
                 ?>
                 <tr>
-                    <td class="item-name"><?= htmlspecialchars($item['producto_nombre'] ?? 'Producto') ?></td>
+                    <td class="item-name"><?= htmlspecialchars($item['nombre_producto'] ?? 'Producto') ?></td>
                     <td class="text-center"><?= $item['cantidad'] ?? 1 ?></td>
-                    <td class="text-right"><?= number_format($precioUnitario, 2) ?></td>
-                    <td class="text-right"><?= number_format($subtotalItem, 2) ?></td>
+                    <td class="text-right"><?= number_format($precioUnitarioBs, 2) ?></td>
+                    <td class="text-right"><?= number_format($subtotalItemBs, 2) ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -276,8 +280,8 @@ if (!empty($venta['cliente_id'])) {
         <!-- Totales -->
         <div class="totals-section">
             <div class="total-row">
-                <span>Subtotal USD:</span>
-                <span>$<?= number_format($venta['total_usd'], 2) ?></span>
+                <span>Subtotal Bs:</span>
+                <span><?= number_format($venta['total_ves'], 2) ?></span>
             </div>
             <div class="total-row">
                 <span>Tasa (Bs/$):</span>
@@ -287,9 +291,7 @@ if (!empty($venta['cliente_id'])) {
                 <span>TOTAL Bs:</span>
                 <span><?= number_format($venta['total_ves'], 2) ?></span>
             </div>
-            <div class="total-row" style="justify-content: center; margin-top: 4px; color: #64748b;">
-                ($<?= number_format($venta['total_usd'], 2) ?> USD)
-            </div>
+
         </div>
 
         <!-- Footer Info -->
