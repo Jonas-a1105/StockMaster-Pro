@@ -249,10 +249,17 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
     if (phpServer) {
-        // Aggressive kill for Windows
+        // Aggressive kill for Windows - SYNCHRONOUS
         if (process.platform === 'win32') {
-            const { exec } = require('child_process');
-            exec(`taskkill /pid ${phpServer.pid} /T /F`);
+            try {
+                const { execSync } = require('child_process');
+                execSync(`taskkill /pid ${phpServer.pid} /T /F`);
+            } catch (e) {
+                // Ignore error if process already dead
+                // Fallback: Kill all phantom php.exe started by this user if PID failed?
+                // Better safe than sorry? No, too risky. Stick to PID.
+                console.error('Error killing PHP:', e);
+            }
         } else {
             phpServer.kill();
         }
