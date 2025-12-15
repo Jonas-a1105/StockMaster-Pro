@@ -143,6 +143,21 @@ function startPHPServer() {
             dbPath = targetDbPath;
         }
 
+        // DEBUGGING: Write specific debug log to UserData to inspect paths
+        const debugLogPath = path.join(app.getPath('userData'), 'debug_boot.txt');
+        const logDebug = (msg) => {
+            try { fs.appendFileSync(debugLogPath, new Date().toISOString() + ': ' + msg + '\n'); } catch (e) { }
+        };
+
+        logDebug('--- STARTUP 1.0.4 ---');
+        logDebug('Resources Path: ' + process.resourcesPath);
+        logDebug('DocRoot: ' + docRoot);
+        logDebug('DocRoot Exists: ' + fs.existsSync(docRoot));
+        logDebug('PHP Bin: ' + phpBin);
+        logDebug('PHP Bin Exists: ' + fs.existsSync(phpBin));
+        logDebug('DB Path: ' + dbPath);
+        logDebug('CWD: ' + (isDev ? __dirname : process.resourcesPath));
+
         console.log('Starting PHP Server...');
         // console.log('Binary:', phpBin);
         // console.log('DocRoot:', docRoot);
