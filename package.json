@@ -1,7 +1,7 @@
 {
   "name": "stockmaster-pro-desktop",
   "productName": "StockMaster Pro",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "StockMaster Pro - Sistema de Gestión Empresarial",
   "main": "main.js",
   "scripts": {
@@ -44,27 +44,16 @@
       "deleteAppDataOnUninstall": true,
       "license": "LICENSE.txt"
     },
-    "asarUnpack": [
-      "src/**/*",
-      "public/**/*",
-      "views/**/*",
-      "vendor/**/*",
-      "database/**/*"
-    ],
-    "files": [
-      "**/*",
-      "!**/*.ts",
-      "!*.map",
-      "!package-lock.json",
-      "!README*.md",
-      "!inspect_schema.php",
-      "!add_codigo_column.php"
-    ],
     "extraResources": [
       {
         "from": "resources/bin",
         "to": "bin"
-      }
+      },
+      "src",
+      "public",
+      "views",
+      "vendor",
+      "database"
     ]
   },
   "dependencies": {

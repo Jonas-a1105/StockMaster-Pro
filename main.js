@@ -123,7 +123,7 @@ function startPHPServer() {
             // 1. Files are in resources/app.asar.unpacked (physically present for PHP)
             // __dirname in prod is inside app.asar. We need to get out.
             // process.resourcesPath = .../resources
-            docRoot = path.join(process.resourcesPath, 'app.asar.unpacked', 'public');
+            docRoot = path.join(process.resourcesPath, 'public');
 
             // 2. Database Handling (Move to UserData to be writable and hidden)
             const userDataPath = app.getPath('userData'); // C:\Users\User\AppData\Roaming\sistema-inventario
@@ -132,7 +132,7 @@ function startPHPServer() {
             // Check if DB exists in UserData, if not, copy from resources
             if (!fs.existsSync(targetDbPath)) {
                 // Template DB in unpacked resources
-                const sourceDbPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'database', 'database.sqlite');
+                const sourceDbPath = path.join(process.resourcesPath, 'database', 'database.sqlite');
                 console.log('Deploying Database to:', targetDbPath);
                 try {
                     fs.copyFileSync(sourceDbPath, targetDbPath);
@@ -155,7 +155,7 @@ function startPHPServer() {
 
         phpServer = spawn(phpBin, ['-S', `${HOST}:${PHP_PORT}`, '-t', docRoot], {
             env: env,
-            cwd: isDev ? __dirname : path.join(process.resourcesPath, 'app.asar.unpacked'),
+            cwd: isDev ? __dirname : process.resourcesPath,
             windowsHide: true // Hide the PHP console window on Windows
         });
 
