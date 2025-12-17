@@ -14,8 +14,22 @@
         <h1 class="text-4xl font-bold text-slate-800 mb-2">StockMaster <span class="text-emerald-500">Pro</span></h1>
         <p class="text-lg text-slate-500 font-medium mb-8">Gestión Empresarial Inteligente</p>
 
+        <style>
+            @keyframes ping-local {
+                75%, 100% {
+                    transform: scale(2);
+                    opacity: 0;
+                }
+            }
+            .animate-ping-local {
+                animation: ping-local 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+            }
+        </style>
         <div class="inline-flex items-center gap-3 px-4 py-2 bg-slate-50 border border-slate-200 rounded-full mb-8">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="relative flex h-3 w-3" style="display: flex;">
+                <span class="animate-ping-local absolute inline-flex h-full w-full rounded-full" style="display: inline-flex; width: 100%; height: 100%; background-color: #34d399; opacity: 0.75;"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3" style="display: inline-flex; width: 0.75rem; height: 0.75rem; background-color: #10b981;"></span>
+            </span>
             <span class="text-sm font-semibold text-slate-600">Versión <?= defined('APP_VERSION') ? APP_VERSION : '1.0.0' ?> (Enterprise)</span>
         </div>
 

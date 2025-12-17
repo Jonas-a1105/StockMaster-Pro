@@ -55,6 +55,17 @@
             overflow: hidden;
         }
         
+        /* Ping Animation (Manual Injection) */
+        @keyframes ping {
+            75%, 100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+        .animate-ping {
+            animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
         /* Input focus ring */
         .input-focus {
             @apply focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500;
