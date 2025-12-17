@@ -1,7 +1,7 @@
 {
   "name": "stockmaster-pro-desktop",
   "productName": "StockMaster Pro",
-  "version": "1.0.5",
+  "version": "1.1.2",
   "description": "StockMaster Pro - Sistema de Gestión Empresarial",
   "main": "main.js",
   "scripts": {
@@ -29,7 +29,8 @@
       "target": "nsis",
       "icon": "public/img/StockMasterPro.ico",
       "verifyUpdateCodeSignature": false,
-      "forceCodeSigning": false
+      "forceCodeSigning": false,
+      "artifactName": "StockMaster.Pro.Setup.${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -53,7 +54,8 @@
       "public",
       "views",
       "vendor",
-      "database"
+      "database",
+      "package.json"
     ]
   },
   "dependencies": {

@@ -53,11 +53,11 @@ async function inicializarTasa() {
     const inputTasaManual = document.getElementById('tasa-manual-input');
 
     // 1. Verificar si hay tasa manual guardada
-    // 1. Verificar si hay tasa manual guardada
     const tasaGuardada = localStorage.getItem('manualRate');
 
     // Elementos Navbar
     const navInput = document.getElementById('nav-tasa-input');
+    const posInput = document.getElementById('tasa-manual'); // POS page
 
     if (tasaGuardada) {
         const tasa = parseFloat(tasaGuardada);
@@ -67,7 +67,12 @@ async function inicializarTasa() {
         if (tasaUsd) tasaUsd.textContent = `${tasa.toFixed(2)} VES`;
         if (apiStatus) apiStatus.textContent = 'Aplicada.';
         if (inputTasaManual) inputTasaManual.value = tasa;
-        if (navInput) navInput.value = tasa; // Init Navbar Input
+        if (posInput) posInput.value = tasa;
+        if (navInput) navInput.value = tasa;
+
+        // Footer update
+        const footerTasa = document.getElementById('footer-tasa');
+        if (footerTasa) footerTasa.textContent = `Bs. ${tasa.toFixed(2)}`;
 
         ExchangeRate.aplicar(tasa);
         return;
@@ -84,8 +89,12 @@ async function inicializarTasa() {
         if (tasa) {
             tasaCambioBS = tasa;
             if (tasaUsd) tasaUsd.textContent = `${tasa.toFixed(2)} VES`;
-            if (navInput) navInput.value = tasa; // Init Navbar Input
+            if (navInput) navInput.value = tasa;
             if (apiStatus) apiStatus.textContent = 'Conectado.';
+
+            const footerTasa = document.getElementById('footer-tasa');
+            if (footerTasa) footerTasa.textContent = `Bs. ${tasa.toFixed(2)}`;
+
             ExchangeRate.aplicar(tasa);
         }
     } catch (error) {
@@ -95,8 +104,12 @@ async function inicializarTasa() {
             tasaCambioBS = tasaFallback;
             if (apiSource) apiSource.textContent = 'PyDolarVE (Fallback)';
             if (tasaUsd) tasaUsd.textContent = `${tasaFallback.toFixed(2)} VES`;
-            if (navInput) navInput.value = tasaFallback; // Init Navbar Input
+            if (navInput) navInput.value = tasaFallback;
             if (apiStatus) apiStatus.textContent = 'Conectado.';
+
+            const footerTasa = document.getElementById('footer-tasa');
+            if (footerTasa) footerTasa.textContent = `Bs. ${tasaFallback.toFixed(2)}`;
+
             ExchangeRate.aplicar(tasaFallback);
         } else {
             if (apiSource) apiSource.textContent = 'Sin Conexión';
@@ -125,51 +138,110 @@ function aplicarTasa(tasa) {
  * Actualiza precios en VES en la tabla de inventario
  */
 function actualizarPreciosVES(tasa) {
-    if (tasa <= 0) return;
+    console.log('[ExchangeRate] actualizarPreciosVES ejecutado con tasa:', tasa);
+    if (!tasa || isNaN(tasa) || tasa <= 0) {
+        console.warn('[ExchangeRate] Tasa inválida para actualizar precios');
+        return;
+    }
 
-    const tablaInventario = document.getElementById('tabla-inventario');
-    if (!tablaInventario) return;
+    // Usar requestAnimationFrame para asegurar que el DOM esté listo
+    requestAnimationFrame(() => {
+        // SI existe el módulo de Productos con su lógica de modos (USD/VES), delegar en él
+        if (window.Productos && typeof window.Productos.actualizarPrecios === 'function') {
+            console.log('[ExchangeRate] Delegando a Productos.actualizarPrecios()');
+            window.Productos.actualizarPrecios();
+            return;
+        }
 
-    const filas = tablaInventario.querySelectorAll('tbody tr[data-precio-venta-usd]');
+        // Si no (p.ej. estamos en otra vista), usar lógica genérica de fallback
 
-    filas.forEach(fila => {
-        const setCell = (selector, valorUSD) => {
-            const celda = fila.querySelector(selector);
-            if (celda && !isNaN(valorUSD) && valorUSD !== null) {
+        // 1. Actualizar elementos .currency-wrapper (Fallback genérico)
+        // Esta clase está en los TDs de la tabla: Precio Compra, Venta, Ganancia
+        const wrappers = document.querySelectorAll('.currency-wrapper');
+
+        wrappers.forEach(wrapper => {
+            const valorUSD = parseFloat(wrapper.dataset.usd);
+            const precioSec = wrapper.querySelector('.price-sec');
+
+            if (precioSec && !isNaN(valorUSD)) {
                 const valorBs = valorUSD * tasa;
-                celda.textContent = `Bs. ${valorBs.toLocaleString('en-US', {
+
+                // Forzar repintado si es necesario ocultando y mostrando (hack extremo si nada funciona)
+                // precioSec.style.display = 'none';
+                // precioSec.offsetHeight; // trigger reflow
+                // precioSec.style.display = 'block';
+
+                precioSec.textContent = `Bs. ${valorBs.toLocaleString('es-VE', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 })}`;
             }
-        };
+        });
 
-        const pCompra = parseFloat(fila.dataset.precioCompraUsd || 0);
-        const pVenta = parseFloat(fila.dataset.precioVentaUsd || 0);
-        const gUnit = parseFloat(fila.dataset.gananciaUsd || 0);
-        const gTotal = parseFloat(fila.dataset.gastoTotalUsd || 0);
-        const ganTotal = parseFloat(fila.dataset.gananciaTotalUsd || 0);
-        const vTotal = parseFloat(fila.dataset.valorVentaTotalUsd || 0);
+        // 2. Actualizar elementos genéricos con data-currency-usd
+        const generics = document.querySelectorAll('[data-currency-usd]');
 
-        setCell('.precio-compra-ves', pCompra);
-        setCell('.precio-venta-ves', pVenta);
-        setCell('.ganancia-ves', gUnit);
-        setCell('.gasto-total-ves', gTotal);
-        setCell('.ganancia-total-ves', ganTotal);
-        setCell('.valor-venta-total-ves', vTotal);
+        generics.forEach(el => {
+            const valorUSD = parseFloat(el.dataset.currencyUsd);
+
+            // Evitamos actualizar si el elemento está DENTRO de un wrapper ya actualizado
+            if (el.closest('.currency-wrapper')) return;
+
+            if (!isNaN(valorUSD)) {
+                const valorBs = valorUSD * tasa;
+                el.textContent = `Bs. ${valorBs.toLocaleString('es-VE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}`;
+            }
+        });
     });
 }
 
 /**
  * Lógica compartida para guardar tasa
  */
+/**
+ * Lógica compartida para guardar tasa
+ */
 async function guardarTasaManual(tasa) {
-    if (isNaN(tasa) || tasa <= 0) {
+    if (!tasa || isNaN(tasa) || tasa <= 0) {
         mostrarNotificacion('Ingresa una tasa válida', 'error');
         return;
     }
 
+    // 1. OPTIMISTIC UPDATE: Aplicar cambios visuales de inmediato
+    console.log('[ExchangeRate] Aplicando actualización optimista...');
+    tasaCambioBS = tasa;
+
+    // Forzar actualización inmediata de elementos UI globales
+    const tasaUsd = document.getElementById('tasa-usd');
+    const footerTasa = document.getElementById('footer-tasa');
+    const navInput = document.getElementById('nav-tasa-input');
+    const configInput = document.getElementById('tasa-manual-input');
+
+    if (tasaUsd) tasaUsd.textContent = `${tasa.toFixed(2)} VES`;
+    if (footerTasa) footerTasa.textContent = `Bs. ${Number(tasa).toFixed(2)}`;
+
+    // Solo actualizar input del navbar si no tiene foco (para no molestar al usuario mientras escribe)
+    if (navInput && document.activeElement !== navInput) {
+        navInput.value = tasa;
+    }
+
+    if (configInput && document.activeElement !== configInput) {
+        configInput.value = tasa;
+    }
+
+    // Aplicar a la vista actual (tablas, etc)
+    if (window.ExchangeRate && window.ExchangeRate.aplicar) {
+        window.ExchangeRate.aplicar(tasa);
+    } else {
+        // Fallback si ExchangeRate no está totalmente expuesto aún
+        if (typeof actualizarPreciosVES === 'function') actualizarPreciosVES(tasa);
+    }
+
     try {
+        // 2. Guardar en Backend
         const res = await fetch('index.php?controlador=config&accion=guardarTasa', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -179,25 +251,15 @@ async function guardarTasaManual(tasa) {
 
         if (data.success) {
             localStorage.setItem('manualRate', tasa);
-            tasaCambioBS = tasa;
-
-            // Actualizar inputs visuales
-            const navInput = document.getElementById('nav-tasa-input');
-            const configInput = document.getElementById('tasa-manual-input');
-            const tasaUsd = document.getElementById('tasa-usd');
-
-            if (navInput) navInput.value = tasa;
-            if (configInput) configInput.value = tasa;
-            if (tasaUsd) tasaUsd.textContent = `Bs. ${tasa}`; // Falback text element if exists
-
-            ExchangeRate.aplicar(tasa);
             mostrarNotificacion('Tasa actualizada correctamente', 'success');
         } else {
-            mostrarNotificacion('Error al guardar tasa', 'error');
+            console.error('[ExchangeRate] Error en servidor:', data.error);
+            mostrarNotificacion('Error al guardar tasa en servidor', 'error');
         }
     } catch (e) {
         console.error(e);
-        mostrarNotificacion('Error de conexión', 'error');
+        // Aún así mantenemos el cambio visual porque es probable que sea error de red temporal
+        mostrarNotificacion('Tasa aplicada localmente (Error de conexión)', 'warning');
     }
 }
 
@@ -210,27 +272,47 @@ function configurarTasaManual() {
     const inputConfig = document.getElementById('tasa-manual-input');
 
     if (btnConfig && inputConfig) {
-        btnConfig.addEventListener('click', () => {
-            guardarTasaManual(parseFloat(inputConfig.value));
+        // Remover listener anterior si existe (cloning)
+        const newBtnConfig = btnConfig.cloneNode(true);
+        btnConfig.parentNode.replaceChild(newBtnConfig, btnConfig);
+
+        newBtnConfig.addEventListener('click', (e) => {
+            e.preventDefault();
+            let valor = inputConfig.value;
+            valor = valor.replace(',', '.'); // Soporte coma
+            guardarTasaManual(parseFloat(valor));
         });
     }
 
-    // Navbar (Elementos persistentes, verificar para no duplicar listeners)
+    // Navbar (Elementos persistentes)
     const btnNav = document.getElementById('nav-btn-update');
     const inputNav = document.getElementById('nav-tasa-input');
 
     if (btnNav && inputNav) {
-        if (!btnNav.dataset.hasListener) {
-            btnNav.addEventListener('click', () => {
-                guardarTasaManual(parseFloat(inputNav.value));
-            });
-            btnNav.dataset.hasListener = 'true';
-        }
+        console.log('[ExchangeRate] Botón navbar encontrado, configurando listener...');
+
+        // Clonar para asegurar limpieza de event listeners previos
+        const newBtn = btnNav.cloneNode(true);
+        btnNav.parentNode.replaceChild(newBtn, btnNav);
+
+        newBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('[ExchangeRate] Click en actualizar tasa navbar');
+
+            let valor = inputNav.value;
+            valor = valor.replace(',', '.'); // Soporte coma
+            const tasa = parseFloat(valor);
+
+            console.log(`[ExchangeRate] Intentando guardar tasa: ${valor} -> ${tasa}`);
+            guardarTasaManual(tasa);
+        });
 
         if (!inputNav.dataset.hasListener) {
             inputNav.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    guardarTasaManual(parseFloat(inputNav.value));
+                    e.preventDefault();
+                    let valor = inputNav.value.replace(',', '.');
+                    guardarTasaManual(parseFloat(valor));
                 }
             });
             inputNav.dataset.hasListener = 'true';
@@ -244,6 +326,7 @@ window.ExchangeRate = {
     aplicar: aplicarTasa,
     actualizar: actualizarPreciosVES,
     configurarManual: configurarTasaManual,
+    reapply: () => aplicarTasa(tasaCambioBS),
     get tasa() { return tasaCambioBS; },
     set tasa(value) { tasaCambioBS = value; }
 };

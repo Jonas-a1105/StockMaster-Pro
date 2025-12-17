@@ -37,12 +37,9 @@ if ($plan === 'premium') {
 }
 ?>
 
-<nav class="bg-white border-b border-slate-200 sticky top-0 z-50 block w-full !p-0">
+<nav class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50 block w-full !p-0">
     <div class="w-full px-2 sm:px-4 lg:px-8">
-        <div class="flex items-center justify-between h-16">
-            <!-- Izquierda: Logo + Navegación -->
-            <div class="flex items-center gap-8">
-                <!-- Logo -->
+        <div class="relative flex items-center justify-between h-16">
                 <!-- Logo -->
                 <div class="flex items-center gap-3 group cursor-pointer" onclick="window.location.href='<?= $homeLink ?>'">
                     <div class="relative w-12 h-12 bg-emerald-50 border border-emerald-200 rounded-xl p-0.5 shadow-sm transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:shadow-md overflow-hidden">
@@ -78,35 +75,36 @@ if ($plan === 'premium') {
                             <path d="M54 12 C 54 12, 44 14, 42 22 C 42 22, 58 24, 60 14 C 60 14, 58 8, 54 12 Z" fill="#10B981" stroke="white" stroke-width="1" filter="url(#shadow)"/>
                         </svg>
                     </div>
-                    <span class="text-xl font-bold text-slate-800">StockMaster <span class="text-emerald-500">Pro</span></span>
+                    <span class="text-xl font-bold text-slate-800 dark:text-white hidden sm:inline">StockMaster <span class="text-emerald-500">Pro</span></span>
+
                 </div>
+
                 
-                <!-- Navegación Principal -->
-                <div class="hidden lg:flex items-center gap-1">
-                    <?php 
-                    $currentCtrl = $_GET['controlador'] ?? ($plan === 'free' ? 'free' : 'dashboard');
-                    
-                    foreach ($navItems as $item): 
-                        // Simple logic to determine active state: check if URL contains current controller
-                        $isActive = false;
-                        parse_str(parse_url($item['url'], PHP_URL_QUERY), $queryParams);
-                        if (isset($queryParams['controlador']) && $queryParams['controlador'] === $currentCtrl) {
-                            $isActive = true;
-                        } else if ($currentCtrl === 'dashboard' && strpos($item['url'], 'controlador=dashboard') !== false) {
-                            $isActive = true; 
-                        }
-                    ?>
-                        <a href="<?= $item['url'] ?>" 
-                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border-2
-                                  <?= $isActive 
-                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-500 shadow-sm hover:bg-emerald-100' // Active State
-                                      : 'text-slate-600 border-transparent hover:text-emerald-600 hover:bg-slate-50' // Inactive State
-                                  ?>">
-                            <?= Icons::get($item['icon'], 'w-4 h-4') ?>
-                            <span><?= $item['label'] ?></span>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
+            <!-- Navegación Principal (Centrada) -->
+            <div class="hidden lg:flex items-center gap-1 justify-center <?= ($plan ?? 'free') === 'free' ? 'absolute left-1/2 -translate-x-1/2' : 'flex-1 mx-8' ?>">
+                <?php 
+                $currentCtrl = $_GET['controlador'] ?? ($plan === 'free' ? 'free' : 'dashboard');
+                
+                foreach ($navItems as $item): 
+                    // Simple logic to determine active state
+                    $isActive = false;
+                    parse_str(parse_url($item['url'], PHP_URL_QUERY), $queryParams);
+                    if (isset($queryParams['controlador']) && $queryParams['controlador'] === $currentCtrl) {
+                        $isActive = true;
+                    } else if ($currentCtrl === 'dashboard' && strpos($item['url'], 'controlador=dashboard') !== false) {
+                        $isActive = true; 
+                    }
+                ?>
+                    <a href="<?= $item['url'] ?>" 
+                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border-2
+                              <?= $isActive 
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-500 shadow-sm hover:bg-emerald-100' // Active State
+                                  : 'text-slate-600 border-transparent hover:text-emerald-600 hover:bg-slate-50' // Inactive State
+                              ?>">
+                        <?= Icons::get($item['icon'], 'w-4 h-4') ?>
+                        <span><?= $item['label'] ?></span>
+                    </a>
+                <?php endforeach; ?>
             </div>
             
             <!-- Perfil y Acciones -->
@@ -114,10 +112,10 @@ if ($plan === 'premium') {
                 <?php if ($plan === 'premium'): ?>                    
                     <!-- Tasa de Cambio -->
                     <!-- Tasa de Cambio (Input Rápido) -->
-                    <div class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-100 border border-transparent hover:border-slate-200 focus-within:bg-white focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 rounded-lg transition-all">
+                    <div class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 focus-within:bg-white dark:focus-within:bg-slate-600 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 rounded-lg transition-all">
                         <span class="text-xs text-slate-500 font-medium whitespace-nowrap">USD:</span>
                         <input type="number" id="nav-tasa-input" step="0.01" 
-                               class="w-28 bg-transparent border-none p-0 text-sm font-bold text-slate-700 focus:ring-0 text-right" 
+                               class="w-28 bg-transparent border-none p-0 text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-0 text-right" 
                                placeholder="0.00">
                         <button id="nav-btn-update" 
                                 class="ml-1 p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors"
@@ -128,7 +126,7 @@ if ($plan === 'premium') {
                     
                     <!-- Notificaciones -->
                     <div class="relative" id="notif-container">
-                        <button id="btn-notificaciones" class="relative p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+                        <button id="btn-notificaciones" class="relative p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                             <?= Icons::get('bell', 'w-5 h-5') ?>
                             <?php if ($notifNoLeidas > 0): ?>
                                 <span class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
@@ -138,7 +136,7 @@ if ($plan === 'premium') {
                         </button>
                         
                         <!-- Dropdown Notificaciones -->
-                        <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50">
+                        <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
                             <div class="px-4 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
                                 <div class="flex items-center justify-between">
                                     <span class="font-semibold">Notificaciones</span>
@@ -171,15 +169,33 @@ if ($plan === 'premium') {
                             </div>
                         </div>
                     </div>
-                <?php else: ?>
-                    <a href="index.php?controlador=premium&accion=index" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg text-sm font-medium shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40 transition-all">
-                        <?= Icons::get('crown', 'w-4 h-4') ?>
-                        <span>Upgrade</span>
-                    </a>
+                    </div>
                 <?php endif; ?>
-                
-                <!-- Toggle Tema -->
-                <button id="btn-theme-toggle" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+
+                <!-- License Status (Only for Premium) -->
+                <?php 
+                if (isset($plan) && $plan === 'premium') {
+                    $licInfo = \App\Helpers\LicenseHelper::obtenerInfoLicencia();
+                    if ($licInfo) {
+                        $days = $licInfo['days_remaining'];
+                        $badgeColor = 'emerald';
+                        $badgeIcon = 'shield-check';
+                        
+                        if ($days < 30) { $badgeColor = 'amber'; $badgeIcon = 'clock'; }
+                        if ($days < 7) { $badgeColor = 'red'; $badgeIcon = 'exclamation-circle'; }
+                        ?>
+                        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-<?= $badgeColor ?>-50 text-<?= $badgeColor ?>-700 border border-<?= $badgeColor ?>-200 rounded-full text-xs font-semibold shadow-sm" title="Vence el: <?= $licInfo['expiration_date'] ?>">
+                            <?= Icons::get($badgeIcon, 'w-3.5 h-3.5') ?>
+                            <span><?= $days ?> días</span>
+                        </div>
+                        <?php
+                    }
+                }
+                ?>
+                <button onclick="window.location.href='index.php?controlador=ayuda'" class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Manual de Usuario">
+                    <?= Icons::get('question-circle', 'w-5 h-5') ?>
+                </button>
+                <button id="btn-theme-toggle" class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                     <span id="theme-icon-light"><?= Icons::get('moon', 'w-5 h-5') ?></span>
                     <span id="theme-icon-dark" class="hidden"><?= Icons::get('sun', 'w-5 h-5') ?></span>
                 </button>
@@ -218,33 +234,35 @@ if ($plan === 'premium') {
                     </button>
                     
                     <!-- Dropdown Usuario -->
-                    <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50">
-                        <div class="px-4 py-3 border-b border-slate-100">
-                            <p class="text-sm font-medium text-slate-800"><?= htmlspecialchars($userName) ?></p>
-                            <p class="text-xs text-slate-500"><?= ucfirst($plan) ?> • <?= ucfirst($rol) ?></p>
+                    <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
+                        <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+                            <p class="text-sm font-medium text-slate-800 dark:text-white"><?= htmlspecialchars($userName) ?></p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400"><?= ucfirst($plan) ?> • <?= ucfirst($rol) ?></p>
                         </div>
                         <div class="py-1">
-                            <a href="index.php?controlador=perfil&accion=index" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                            <a href="index.php?controlador=perfil&accion=index" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
                                 <?= Icons::get('user', 'w-4 h-4 text-slate-400') ?>
                                 Mi Perfil
                             </a>
-                            <a href="index.php?controlador=acerca&accion=index" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                            <a href="index.php?controlador=acerca&accion=index" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
                                 <?= Icons::get('info', 'w-4 h-4 text-slate-400') ?>
                                 Acerca de
                             </a>
-                            <a href="index.php?controlador=config&accion=index" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                            <?php if ($plan === 'premium'): ?>
+                            <a href="index.php?controlador=config&accion=index" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
                                 <?= Icons::get('settings', 'w-4 h-4 text-slate-400') ?>
                                 Configuración
                             </a>
+                            <?php endif; ?>
                             <?php if ($rol === 'admin'): ?>
-                            <a href="index.php?controlador=admin&accion=index" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                            <a href="index.php?controlador=admin&accion=index" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
                                 <?= Icons::get('team', 'w-4 h-4 text-slate-400') ?>
                                 Administración
                             </a>
                             <?php endif; ?>
                         </div>
-                        <div class="border-t border-slate-100 py-1">
-                            <button id="btn-logout-trigger" class="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                        <div class="border-t border-slate-100 dark:border-slate-700 py-1">
+                            <button id="btn-logout-trigger" class="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
                                 <?= Icons::get('logout', 'w-4 h-4') ?>
                                 Cerrar Sesión
                             </button>
@@ -253,7 +271,7 @@ if ($plan === 'premium') {
                 </div>
                 
                 <!-- Menú Móvil -->
-                <button id="btn-mobile-menu" class="lg:hidden p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg">
+                <button id="btn-mobile-menu" class="lg:hidden p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                     <?= Icons::get('menu', 'w-5 h-5') ?>
                 </button>
             </div>
@@ -261,11 +279,11 @@ if ($plan === 'premium') {
     </div>
     
     <!-- Menú Móvil Expandido -->
-    <div id="mobile-menu" class="hidden lg:hidden border-t border-slate-200 bg-white">
-        <div class="px-4 py-3 space-y-1">
+    <div id="mobile-menu" class="hidden lg:hidden bg-white dark:bg-slate-800 absolute top-16 right-2 w-72 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
+        <div class="px-4 py-3 space-y-1 max-h-[70vh] overflow-y-auto">
             <?php foreach ($navItems as $item): ?>
-                <a href="<?= $item['url'] ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-700 hover:bg-slate-100">
-                    <?= Icons::get($item['icon'], 'w-5 h-5 text-slate-400') ?>
+                <a href="<?= $item['url'] ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                    <?= Icons::get($item['icon'], 'w-5 h-5 text-slate-400 dark:text-slate-500') ?>
                     <span class="font-medium"><?= $item['label'] ?></span>
                 </a>
             <?php endforeach; ?>
@@ -320,4 +338,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial check
     updateNavbarActiveState();
 });
+</script>
+
+<!-- License Heartbeat -->
+<script>
+    (function(){
+        // Polling interval: 10 seconds (for testing purposes, usually 60s is enough)
+        const POLL_INTERVAL = 10000; 
+        
+        setInterval(() => {
+            fetch('index.php?controlador=license&accion=checkStatus')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.active === false) {
+                        console.warn('Licencia expirada. Recargando...');
+                        window.location.href = 'index.php?controlador=free';
+                    }
+                })
+                .catch(err => console.error('Error verificando licencia:', err));
+        }, POLL_INTERVAL);
+    })();
 </script>

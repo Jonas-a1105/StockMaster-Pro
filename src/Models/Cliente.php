@@ -154,11 +154,8 @@ class Cliente {
      * Obtener historial de compras de un cliente
      */
     public function obtenerHistorialCompras($clienteId, $limite = 20) {
-        $query = "SELECT v.*, 
-                  (SELECT GROUP_CONCAT(CONCAT(vi.cantidad, 'x ', vi.nombre_producto) SEPARATOR ', ') 
-                   FROM venta_items vi 
-                   WHERE vi.venta_id = v.id) as productos
-                  FROM ventas v
+        // 1. Obtener las ventas principales
+        $query = "SELECT v.* FROM ventas v
                   WHERE v.cliente_id = ?
                   ORDER BY v.created_at DESC
                   LIMIT ?";
@@ -167,7 +164,45 @@ class Cliente {
         $stmt->bindValue(1, $clienteId, PDO::PARAM_INT);
         $stmt->bindValue(2, $limite, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll();
+        $ventas = $stmt->fetchAll();
+
+        if (empty($ventas)) {
+            return [];
+        }
+
+        // 2. Obtener los IDs de las ventas encontradas
+        $ventaIds = array_column($ventas, 'id');
+        
+        // 3. Obtener los items de esas ventas (Soporte Multi-DB: Evitamos GROUP_CONCAT específico)
+        // Usamos placeholders dinámicos (?, ?, ?)
+        $placeholders = implode(',', array_fill(0, count($ventaIds), '?'));
+        
+        $queryItems = "SELECT venta_id, cantidad, nombre_producto 
+                       FROM venta_items 
+                       WHERE venta_id IN ($placeholders)";
+        
+        $stmtItems = $this->db->prepare($queryItems);
+        $stmtItems->execute($ventaIds);
+        $todosItems = $stmtItems->fetchAll();
+
+        // 4. Agrupar items por venta en memoria (PHP)
+        $itemsPorVenta = [];
+        foreach ($todosItems as $item) {
+            $itemsPorVenta[$item['venta_id']][] = $item['cantidad'] . 'x ' . $item['nombre_producto'];
+        }
+
+        // 5. Asignar la cadena formateada a cada venta
+        foreach ($ventas as &$venta) {
+            $vid = $venta['id'];
+            if (isset($itemsPorVenta[$vid])) {
+                $venta['productos'] = implode(', ', $itemsPorVenta[$vid]);
+            } else {
+                $venta['productos'] = '';
+            }
+        }
+        unset($venta); // Romper referencia
+
+        return $ventas;
     }
 
     /**

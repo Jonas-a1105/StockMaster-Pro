@@ -136,11 +136,4 @@ $busqueda = $_GET['buscar'] ?? '';
 <!-- Include Shared Modal -->
 <?php include 'modal_crear.php'; ?>
 
-<script>
-// Bridge to open modal with data
-function editarCliente(cliente) {
-    if (typeof abrirModalCliente === 'function') {
-        abrirModalCliente(cliente); // Pass data to the function we'll define in modal_crear.php
-    }
-}
-</script>
+

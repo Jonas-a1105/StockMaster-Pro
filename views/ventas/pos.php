@@ -60,7 +60,7 @@ $tasaBCV = $_SESSION['tasa_bcv'] ?? 0;
                        placeholder="Buscar producto o escanear código de barras..."
                        autocomplete="off"
                        class="w-full pl-12 pr-4 py-3.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-lg">
-                <div id="pos-resultados-busqueda" class="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-700 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 max-h-80 overflow-y-auto z-50 hidden"></div>
+                <div id="pos-resultados-busqueda" style="z-index: 9999;" class="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-700 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 max-h-80 overflow-y-auto hidden"></div>
             </div>
         </div>
         
@@ -123,7 +123,7 @@ $tasaBCV = $_SESSION['tasa_bcv'] ?? 0;
                        placeholder="Buscar cliente..."
                        autocomplete="off"
                        class="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                <div id="cliente-resultados" class="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-700 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 max-h-60 overflow-y-auto z-50 hidden"></div>
+                <div id="cliente-resultados" style="z-index: 9999;" class="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-700 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 max-h-60 overflow-y-auto hidden"></div>
             </div>
             
             <button onclick="abrirModalCliente()" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors">
@@ -163,7 +163,7 @@ $tasaBCV = $_SESSION['tasa_bcv'] ?? 0;
                 <!-- Método de Pago -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Método de Pago</label>
-                    <select id="metodo-pago" class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+                    <select id="metodo-pago" data-setup-simple-select class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
                         <option value="Efectivo">💵 Efectivo</option>
                         <option value="Pago Movil">📱 Pago Móvil</option>
                         <option value="Transferencia">🏦 Transferencia</option>
@@ -176,7 +176,7 @@ $tasaBCV = $_SESSION['tasa_bcv'] ?? 0;
                 <!-- Estado de Pago -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Estado</label>
-                    <select id="estado-pago" class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30" onchange="verificarCredito()">
+                    <select id="estado-pago" data-setup-simple-select class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30" onchange="verificarCredito()">
                         <option value="Pagada">✅ Pagada</option>
                         <option value="Pendiente">⏳ Pendiente (Crédito)</option>
                     </select>
@@ -259,365 +259,13 @@ $tasaBCV = $_SESSION['tasa_bcv'] ?? 0;
 </div>
 
 <script>
+// =========================================================================
+// DATOS DESDE PHP (requeridos por el módulo ventas-pos.js)
+// =========================================================================
 window.tasaCambioBS = <?= json_encode((float)$tasaBCV) ?>;
-console.log('[POS] Inicializando... Tasa:', window.tasaCambioBS);
-
-// === CARRITO ===
-if (!window.carritoPOS) window.carritoPOS = [];
-
-window.limpiarCarrito = function() {
-    if (!window.carritoPOS || window.carritoPOS.length === 0) {
-        showToast('El carrito ya está vacío', 'info');
-        return;
-    }
-    window.carritoPOS = [];
-    renderizarCarrito();
-    showToast('Carrito limpiado', 'success');
-};
-
-window.renderizarCarrito = function() {
-    const tbody = document.getElementById('carrito-body');
-    const tabla = document.getElementById('tabla-carrito');
-    const vacio = document.getElementById('carrito-vacio');
-    
-    if (!tbody) return;
-    
-    const isEmpty = !window.carritoPOS || window.carritoPOS.length === 0;
-    
-    if (vacio) vacio.classList.toggle('hidden', !isEmpty);
-    if (tabla) tabla.classList.toggle('hidden', isEmpty);
-    
-    if (isEmpty) {
-        actualizarTotalesPOS();
-        return;
-    }
-    
-    tbody.innerHTML = window.carritoPOS.map((item, index) => {
-        const subtotal = item.precio * item.cantidad;
-        return `
-            <tr class="group">
-                <td class="py-3">
-                    <p class="font-medium text-slate-800 dark:text-white">${escapeHTML(item.nombre)}</p>
-                </td>
-                <td class="py-3 text-center">
-                    <input type="number" 
-                           class="w-16 px-2 py-1.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-lg text-center font-semibold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 qty-input"
-                           value="${item.cantidad}" 
-                           min="1"
-                           onchange="actualizarCantidad(${index}, this.value)">
-                </td>
-                <td class="py-3 text-right font-mono text-slate-600 dark:text-slate-300">$${item.precio.toFixed(2)}</td>
-                <td class="py-3 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">$${subtotal.toFixed(2)}</td>
-                <td class="py-3 text-center">
-                    <button onclick="eliminarItem(${index})" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-    
-    actualizarTotalesPOS();
-};
-
-window.actualizarCantidad = function(index, value) {
-    const cantidad = parseInt(value);
-    if (cantidad > 0) {
-        window.carritoPOS[index].cantidad = cantidad;
-        renderizarCarrito();
-    }
-};
-
-window.eliminarItem = function(index) {
-    window.carritoPOS.splice(index, 1);
-    renderizarCarrito();
-};
-
-window.actualizarTotalesPOS = function() {
-    const totalUSD = document.getElementById('total-usd');
-    const totalVES = document.getElementById('total-ves');
-    
-    // Si no existen los elementos (ej: otra vista), no hacer nada
-    if (!totalUSD || !totalVES) return;
-
-    const total = window.carritoPOS.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-    const tasa = parseFloat(document.getElementById('tasa-manual')?.value) || window.tasaCambioBS || 0;
-    
-    totalUSD.textContent = `$${total.toFixed(2)}`;
-    totalVES.textContent = `Bs. ${(total * tasa).toFixed(2)}`;
-};
-
-// === BÚSQUEDA PRODUCTOS ===
-window.searchTimer = window.searchTimer || null;
-window.buscador = document.getElementById('pos-buscador');
-window.resultados = document.getElementById('pos-resultados-busqueda');
-window.currentSearchResults = [];
-
-window.seleccionarProducto = function(index) {
-    const producto = window.currentSearchResults[index];
-    if (producto) {
-        agregarAlCarrito(producto);
-    }
-};
-
-buscador?.addEventListener('input', (e) => {
-    clearTimeout(searchTimer);
-    const term = e.target.value;
-    
-    if (term.length < 2) {
-        resultados.classList.add('hidden');
-        return;
-    }
-    
-    searchTimer = setTimeout(async () => {
-        try {
-            const res = await fetch(`index.php?controlador=venta&accion=buscarProductos&term=${encodeURIComponent(term)}`);
-            const productos = await res.json();
-            window.currentSearchResults = productos;
-            
-            if (productos.length === 0) {
-                resultados.innerHTML = '<div class="p-4 text-center text-slate-400">No se encontraron productos</div>';
-            } else {
-                resultados.innerHTML = productos.map((p, index) => `
-                    <div class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-600 cursor-pointer transition-colors product-result-item" onclick="seleccionarProducto(${index})">
-                        <div class="w-10 h-10 bg-slate-100 dark:bg-slate-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-medium text-slate-800 dark:text-white truncate">${escapeHTML(p.nombre)}</p>
-                            <p class="text-xs text-slate-400">Stock: ${p.stock}</p>
-                        </div>
-                        <span class="text-emerald-600 dark:text-emerald-400 font-semibold">$${parseFloat(p.precioVentaUSD).toFixed(2)}</span>
-                    </div>
-                `).join('');
-            }
-            
-            resultados.classList.remove('hidden');
-        } catch (e) {
-            console.error('[POS] Error búsqueda:', e);
-        }
-    }, 300);
-});
-
-window.agregarAlCarrito = function(producto) {
-    const existente = window.carritoPOS.find(i => i.id === producto.id);
-    if (existente) {
-        existente.cantidad++;
-    } else {
-        window.carritoPOS.push({
-            id: producto.id,
-            nombre: producto.nombre,
-            precio: parseFloat(producto.precioVentaUSD) || 0,
-            cantidad: 1
-        });
-    }
-    renderizarCarrito();
-    window.resultados.classList.add('hidden');
-    buscador.value = '';
-    buscador.focus();
-    showToast(`${producto.nombre} agregado`, 'success');
-};
-
-// === PROCESAR VENTA ===
-window.checkoutPOS = async function() {
-    const btnCobrar = document.getElementById('btn-cobrar');
-    
-    try {
-        if (!window.carritoPOS || window.carritoPOS.length === 0) {
-            showToast('El carrito está vacío', 'error');
-            return;
-        }
-        
-        const clienteId = document.getElementById('cliente-id')?.value || null;
-        const metodoPago = document.getElementById('metodo-pago')?.value || 'Efectivo';
-        const estadoPago = document.getElementById('estado-pago')?.value || 'Pagada';
-        let tasa = parseFloat(document.getElementById('tasa-manual')?.value || 0);
-        if (tasa <= 0) tasa = 1.00;
-        
-        if (estadoPago === 'Pendiente' && !clienteId) {
-            showToast('Para crédito debes seleccionar un cliente', 'warning');
-            return;
-        }
-        
-        if (btnCobrar) {
-            btnCobrar.disabled = true;
-            btnCobrar.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Procesando...`;
-        }
-        
-        const response = await fetch('index.php?controlador=venta&accion=checkout', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                carrito: window.carritoPOS,
-                tasa: tasa,
-                cliente_id: clienteId,
-                metodo_pago: metodoPago,
-                estado_pago: estadoPago,
-                notas: ''
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showToast('¡Venta registrada!', 'success');
-            window.carritoPOS = [];
-            renderizarCarrito();
-            quitarCliente();
-            
-            if (data.ventaId) {
-                window.open(`index.php?controlador=venta&accion=recibo&id=${data.ventaId}`, '_blank');
-            }
-        } else {
-            throw new Error(data.message || 'Error al procesar');
-        }
-    } catch (error) {
-        showToast(error.message, 'error');
-    } finally {
-        if (btnCobrar) {
-            btnCobrar.disabled = false;
-            btnCobrar.innerHTML = `<?= Icons::get("check", "w-5 h-5") ?> Cobrar`;
-        }
-    }
-};
-
-// === CLIENTE ===
-window.searchClientTimer = null;
-window.clienteBuscador = document.getElementById('cliente-buscador');
-window.clienteResultados = document.getElementById('cliente-resultados');
-window.clientResults = [];
-
-window.seleccionarCliente = function(index) {
-    const cliente = window.clientResults[index];
-    if (!cliente) return;
-    
-    document.getElementById('cliente-nombre').textContent = cliente.nombre;
-    document.getElementById('cliente-documento').textContent = cliente.documento || 'Sin documento';
-    
-    const creditoBadget = document.getElementById('cliente-credito');
-    if (creditoBadget) {
-        const credito = parseFloat(cliente.limite_credito || 0);
-        creditoBadget.textContent = `Crédito: $${credito.toFixed(2)}`;
-        creditoBadget.className = credito > 0 
-            ? 'inline-block mt-2 px-2 py-1 bg-emerald-500 text-white text-xs font-bold rounded-lg'
-            : 'inline-block mt-2 px-2 py-1 bg-slate-400 text-white text-xs font-bold rounded-lg';
-    }
-    
-    document.getElementById('cliente-id').value = cliente.id;
-    document.getElementById('cliente-seleccionado').classList.remove('hidden');
-    
-    // Ocultar buscador y limpiar
-    clienteBuscador.value = '';
-    clienteResultados.classList.add('hidden');
-    clienteBuscador.parentElement.classList.add('hidden');
-};
-
-window.quitarCliente = function() {
-    document.getElementById('cliente-seleccionado').classList.add('hidden');
-    document.getElementById('cliente-id').value = '';
-    
-    // Mostrar buscador
-    if (clienteBuscador) {
-        clienteBuscador.value = '';
-        clienteBuscador.parentElement.classList.remove('hidden');
-        clienteBuscador.focus();
-    }
-};
-
-clienteBuscador?.addEventListener('input', (e) => {
-    clearTimeout(searchClientTimer);
-    const term = e.target.value;
-    
-    if (term.length < 2) {
-        clienteResultados.classList.add('hidden');
-        return;
-    }
-    
-    searchClientTimer = setTimeout(async () => {
-        try {
-            const res = await fetch(`index.php?controlador=cliente&accion=buscarParaPOS&term=${encodeURIComponent(term)}`);
-            const clientes = await res.json();
-            window.clientResults = clientes;
-            
-            if (clientes.length === 0) {
-                clienteResultados.innerHTML = '<div class="p-4 text-center text-slate-400">No se encontraron clientes</div>';
-            } else {
-                clienteResultados.innerHTML = clientes.map((c, index) => `
-                    <div class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-600 cursor-pointer transition-colors" onclick="seleccionarCliente(${index})">
-                        <div class="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-medium text-slate-800 dark:text-white truncate">${escapeHTML(c.nombre)}</p>
-                            <p class="text-xs text-slate-400">${c.documento || 'Sin documento'}</p>
-                        </div>
-                    </div>
-                `).join('');
-            }
-            
-            clienteResultados.classList.remove('hidden');
-        } catch (e) {
-            console.error('[POS] Error búsqueda cliente:', e);
-        }
-    }, 300);
-});
-
-// === ATAJOS ===
-function toggleShortcutsHelp() {
-    const panel = document.getElementById('shortcuts-help-panel');
-    panel.classList.toggle('opacity-0');
-    panel.classList.toggle('translate-y-4');
-    panel.classList.toggle('pointer-events-none');
-}
-
-document.addEventListener('keydown', (e) => {
-    const shortcuts = {
-        'F1': () => { e.preventDefault(); toggleShortcutsHelp(); },
-        'F2': () => { e.preventDefault(); document.getElementById('pos-buscador')?.focus(); },
-        'F3': () => { e.preventDefault(); document.getElementById('cliente-buscador')?.focus(); },
-        'F4': () => { e.preventDefault(); checkoutPOS(); },
-        'Escape': () => { resultados?.classList.add('hidden'); }
-    };
-    if (shortcuts[e.key]) shortcuts[e.key]();
-});
-
-// === INIT ===
-// === INIT ===
-function initPOS() {
-    console.log('[POS] Inicializando scripts...');
-    
-    // Configurar botón cobrar
-    const btnCobrar = document.getElementById('btn-cobrar');
-    if (btnCobrar) {
-        // Remover listeners anteriores para evitar duplicados en recargas turbo
-        const newBtn = btnCobrar.cloneNode(true);
-        btnCobrar.parentNode.replaceChild(newBtn, btnCobrar);
-        
-        console.log('[POS] Configurando botón Cobrar');
-        newBtn.addEventListener('click', (e) => {
-            console.log('[POS] Click en Cobrar');
-            checkoutPOS();
-        });
-    } else {
-        console.warn('[POS] Botón Cobrar no encontrado');
-    }
-    
-    renderizarCarrito();
-    
-    // Re-configurar focos
-    if (window.buscador) window.buscador = document.getElementById('pos-buscador');
-    if (window.clienteBuscador) window.clienteBuscador = document.getElementById('cliente-buscador');
-    if (window.buscador) window.buscador.focus();
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPOS);
-} else {
-    initPOS();
-}
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-}
+console.log('[POS] Tasa de cambio:', window.tasaCambioBS);
 </script>
+
+<!-- Módulo de Ventas POS (cargado desde archivo externo) -->
+<script src="<?= BASE_URL ?>js/pages/ventas-pos.js?v=<?= time() ?>"></script>
+

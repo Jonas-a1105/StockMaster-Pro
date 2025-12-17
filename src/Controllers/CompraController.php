@@ -22,8 +22,18 @@ class CompraController {
         $userId = $_SESSION['user_id'];
         $compraModel = new CompraModel();
         
-        // Paginación
-        $porPagina = 20;
+        // === Configuración de Paginación ===
+        $opcionesLimite = [3, 5, 7, 10, 25, 50, 100];
+        $limiteDefault = 10;
+        
+        $porPagina = (int)($_GET['limite'] ?? $_SESSION['compras_per_page'] ?? $limiteDefault);
+        
+        if (!in_array($porPagina, $opcionesLimite)) {
+            if ($porPagina <= 0) $porPagina = $limiteDefault;
+        }
+
+        $_SESSION['compras_per_page'] = $porPagina;
+
         $paginaActual = (int)($_GET['pagina'] ?? 1);
         if ($paginaActual < 1) $paginaActual = 1;
         $offset = ($paginaActual - 1) * $porPagina;
@@ -40,7 +50,9 @@ class CompraController {
             'filtro' => $filtro,
             'paginaActual' => $paginaActual,
             'totalPaginas' => $totalPaginas,
-            'totalRegistros' => $totalRegistros
+            'totalRegistros' => $totalRegistros,
+            'porPagina' => $porPagina,
+            'opcionesLimite' => $opcionesLimite
         ]);
     }
 

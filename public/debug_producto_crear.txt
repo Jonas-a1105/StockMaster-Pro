@@ -5,8 +5,8 @@ Array
     [categoria] => Alimentos
     [proveedor_id] => 0
     [stock] => 50
-    [precio_base] => 3.5
-    [margen_ganancia] => 7
+    [precio_base] => 1.5
+    [margen_ganancia] => 12
     [tiene_iva] => 1
     [iva_porcentaje] => 16
 )

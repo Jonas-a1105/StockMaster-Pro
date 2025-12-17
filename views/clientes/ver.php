@@ -26,10 +26,17 @@ $total_compras = $stats['total_compras'] ?? 0;
         </p>
     </div>
     
-    <a href="index.php?controlador=cliente&accion=index" class="inline-flex items-center gap-2 px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors font-medium">
-        <?= Icons::get('arrow-left', 'w-4 h-4') ?>
-        Volver al Directorio
-    </a>
+    <div class="flex items-center gap-3">
+        <button onclick="openModal('modal-eliminar-cliente')" 
+                class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 dark:bg-red-900/10 dark:border-red-800 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-colors font-medium">
+            <?= Icons::get('trash', 'w-4 h-4') ?>
+            Eliminar
+        </button>
+        <a href="index.php?controlador=cliente&accion=index" class="inline-flex items-center gap-2 px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors font-medium">
+            <?= Icons::get('arrow-left', 'w-4 h-4') ?>
+            Volver
+        </a>
+    </div>
 </div>
 
 <!-- Stats Grid -->
@@ -216,49 +223,33 @@ $total_compras = $stats['total_compras'] ?? 0;
     </div>
 </div>
 
-<script>
-// Tab Logic
-function showTab(tabId) {
-    // Hide all
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('.tab-btn').forEach(el => {
-        el.classList.remove('text-indigo-600', 'border-indigo-600', 'active', 'bg-indigo-50/50', 'dark:text-indigo-400', 'dark:border-indigo-400');
-        el.classList.add('text-slate-500', 'border-transparent');
-    });
-    
-    // Show Target
-    document.getElementById(tabId).classList.remove('hidden');
-    
-    // Activate Button
-    const btn = document.querySelector(`button[data-tab="${tabId}"]`);
-    if(btn) {
-        btn.classList.remove('text-slate-500', 'border-transparent');
-        btn.classList.add('text-indigo-600', 'border-indigo-600', 'active', 'bg-indigo-50/50', 'dark:text-indigo-400', 'dark:border-indigo-400');
-    }
+</div>
 
-    if(tabId === 'historial') {
-        cargarYCalcularBs();
-    }
-}
+<!-- Modal Confirmar Eliminar -->
+<div id="modal-eliminar-cliente" class="hidden fixed inset-0 z-[110]">
+    <div class="fixed inset-0 bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-eliminar-cliente')"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm relative fade-in p-6 text-center">
+            <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                <?= Icons::get('trash', 'w-8 h-8') ?>
+            </div>
+            
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-2">¿Eliminar cliente?</h3>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mb-6">Esta acción marcará al cliente como inactivo. Podrás reactivarlo después si es necesario.</p>
+            
+            <div class="flex gap-3">
+                <button onclick="closeModal('modal-eliminar-cliente')" 
+                        class="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    Cancelar
+                </button>
+                <button onclick="desactivarCliente(<?= $cliente['id'] ?>)"
+                        class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30">
+                    Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
-// Exchange Rate Logic
-async function cargarYCalcularBs() {
-    try {
-        let tasa = window.tasaCambioBS || 0;
-        if (tasa <= 0) {
-            const response = await fetch('index.php?controlador=config&accion=obtenerTasa');
-            const data = await response.json();
-            tasa = data.tasa || 0;
-        }
-        
-        if (tasa > 0) {
-            document.querySelectorAll('.precio-bs').forEach(span => {
-                const usd = parseFloat(span.dataset.usd) || 0;
-                span.textContent = (usd * tasa).toFixed(2);
-            });
-        }
-    } catch (e) {
-        console.error('Error calculando BCV', e);
-    }
-}
-</script>
+<!-- Módulo de Detalle de Cliente (cargado desde archivo externo) -->
+<script src="<?= BASE_URL ?>js/pages/clientes-ver.js?v=<?= time() ?>"></script>

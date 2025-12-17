@@ -452,6 +452,54 @@ class ProductoController {
         exit;
     }
 
+    // --- ELIMINACIÓN MASIVA ---
+    public function eliminarMasivo() {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+             echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+             exit;
+        }
+
+        $userId = $_SESSION['user_id'];
+        $input = json_decode(file_get_contents('php://input'), true);
+        $ids = $input['ids'] ?? [];
+
+        if (empty($ids)) {
+             echo json_encode(['success' => false, 'message' => 'No se seleccionaron productos']);
+             exit;
+        }
+
+        $productoModel = new Producto();
+        $audit = new AuditModel();
+        $deletedCount = 0;
+
+        foreach ($ids as $id) {
+            $id = (int)$id;
+            if ($id <= 0) continue;
+
+            $producto = $productoModel->obtenerPorId($userId, $id);
+            if ($producto) {
+                 // Registrar auditoría
+                 $audit->registrar($userId, 'eliminar_masivo', 'producto', $id, $producto['nombre'], 
+                    ['nombre' => $producto['nombre'], 'stock' => $producto['stock']],
+                    null
+                 );
+                 // Usamos eliminar directamente del modelo
+                 if ($productoModel->eliminar($userId, $id)) {
+                     $deletedCount++;
+                 }
+            }
+        }
+
+        if ($deletedCount > 0) {
+            Session::flash('success', "$deletedCount productos eliminados correctamente.");
+            echo json_encode(['success' => true, 'message' => "$deletedCount productos eliminados."]);
+        } else {
+            echo json_encode(['success' => false, 'message' => "No se pudieron eliminar los productos."]);
+        }
+        exit;
+    }
+
     public function eliminar() {
         $userId = $_SESSION['user_id'];
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

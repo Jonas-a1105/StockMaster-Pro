@@ -137,6 +137,29 @@ class DashboardController {
         exit;
     }
 
+    /**
+     * API: Obtener datos para el footer (Tasa y Valor Inventario)
+     */
+    public function apiFooterStats() {
+        header('Content-Type: application/json');
+        
+        // Permitir incluso en free (aunque idealmente es premium, mostramos datos básicos o 0)
+        // si se quiere restringir: if (($_SESSION['user_plan'] ?? 'free') === 'free') ...
+        
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) { echo json_encode(['error' => 'No session']); exit; }
+
+        $productoModel = new Producto();
+        $kpis = $productoModel->obtenerKPIsDashboard($userId, 0); // Umbral 0 pq no nos importa stock bajo aquí
+        
+        echo json_encode([
+            'valor_inventario_usd' => $kpis['valorTotalCostoUSD'] ?? 0, // Valor al costo
+            'valor_venta_usd' => $kpis['valorTotalVentaUSD'] ?? 0,
+            'tasa_registrada' => $_SESSION['tasa_bcv'] ?? 0
+        ]);
+        exit;
+    }
+
     private function render($vista, $data = []) {
         extract($data);
         $vistaContenido = __DIR__ . '/../../views/' . $vista . '.php';

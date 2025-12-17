@@ -45,17 +45,34 @@ $totalRegistros = $totalRegistros ?? 0;
             
             <form id="form-movimiento" action="index.php?controlador=movimiento&accion=crear" method="POST" class="space-y-4">
                 
-                <!-- Producto -->
+                <!-- Producto (Combobox) -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Producto</label>
-                    <select name="mov-producto" required class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
-                        <option value="">Selecciona un producto...</option>
-                        <?php foreach ($productos as $producto): ?>
-                            <option value="<?= $producto['id'] ?>">
-                                <?= htmlspecialchars($producto['nombre']) ?> (Stock: <?= $producto['stock'] ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <div class="relative z-50" id="combobox-producto-mov">
+                        <input type="hidden" name="mov-producto" id="mov-producto-hidden" required>
+                        
+                        <div class="relative">
+                            <input type="text" id="producto-input-visual" 
+                                   class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 font-medium"
+                                   placeholder="Selecciona un producto..." autocomplete="off">
+                                   
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+
+                            <button type="button" id="btn-limpiar-prod-mov" class="absolute inset-y-0 right-8 flex items-center pr-1 text-slate-400 hover:text-red-500 hidden z-10 cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <ul id="producto-list-mov" class="absolute z-50 w-full mt-1 bg-white dark:bg-slate-700 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 max-h-60 overflow-y-auto hidden">
+                            <!-- JS Injected -->
+                        </ul>
+                    </div>
                 </div>
                 
                 <!-- Tipo -->
@@ -82,7 +99,7 @@ $totalRegistros = $totalRegistros ?? 0;
                 <!-- Motivo -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Motivo</label>
-                    <select id="mov-motivo" name="mov-motivo" required class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+                    <select id="mov-motivo" name="mov-motivo" required data-setup-simple-select class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
                         <option value="">Selecciona tipo primero...</option>
                     </select>
                 </div>
@@ -90,12 +107,32 @@ $totalRegistros = $totalRegistros ?? 0;
                 <!-- Proveedor (Condicional) -->
                 <div id="mov-proveedor-group" class="hidden">
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Proveedor</label>
-                    <select name="mov-proveedor" class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
-                        <option value="0">Selecciona (Opcional)...</option>
-                        <?php foreach ($proveedores as $proveedor): ?>
-                            <option value="<?= $proveedor['id'] ?>"><?= htmlspecialchars($proveedor['nombre']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <!-- Combobox Proveedor -->
+                    <div class="relative z-40" id="combobox-proveedor-mov">
+                        <input type="hidden" name="mov-proveedor" id="mov-proveedor-hidden" value="0">
+                        
+                        <div class="relative">
+                            <input type="text" id="proveedor-input-visual" 
+                                   class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 font-medium"
+                                   placeholder="Buscar proveedor..." autocomplete="off">
+                                   
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+
+                            <button type="button" id="btn-limpiar-prov-mov" class="absolute inset-y-0 right-8 flex items-center pr-1 text-slate-400 hover:text-red-500 hidden z-10 cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <ul id="proveedor-list-mov" class="absolute z-50 w-full mt-1 bg-white dark:bg-slate-700 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 max-h-60 overflow-y-auto hidden">
+                            <!-- JS Injected -->
+                        </ul>
+                    </div>
                 </div>
                 
                 <!-- Cantidad -->
@@ -195,7 +232,8 @@ $totalRegistros = $totalRegistros ?? 0;
                 <!-- Selector Límite -->
                 <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                     <span>Ver</span>
-                    <select onchange="window.location.href='index.php?controlador=movimiento&accion=index&limite=' + this.value + '&pagina=1'"
+                    <select id="limit-selector-mov" data-setup-simple-select
+                            onchange="window.location.href='index.php?controlador=movimiento&accion=index&limite=' + this.value + '&pagina=1'"
                             class="bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg py-1 px-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
                         <?php 
                         $opciones = $opcionesLimite ?? [3, 5, 7, 10, 25, 50, 100];
@@ -260,30 +298,25 @@ $totalRegistros = $totalRegistros ?? 0;
     </div>
 </div>
 
-<script>
-function actualizarMotivos() {
-    const tipo = document.querySelector('input[name="mov-tipo"]:checked')?.value;
-    const select = document.getElementById('mov-motivo');
-    const groupProv = document.getElementById('mov-proveedor-group');
-    
-    select.innerHTML = '<option value="">Selecciona...</option>';
-    
-    if (tipo === 'Entrada') {
-        const options = [
-            'Compra', 'Devolución Proveedor', 'Ajuste Positivo', 'Inventario Inicial'
-        ];
-        options.forEach(opt => {
-            select.add(new Option(opt, opt));
-        });
-        groupProv.classList.remove('hidden');
-    } else if (tipo === 'Salida') {
-        const options = [
-            'Venta', 'Pérdida/Daño', 'Devolución Cliente', 'Ajuste Negativo', 'Consumo Interno'
-        ];
-        options.forEach(opt => {
-            select.add(new Option(opt, opt));
-        });
-        groupProv.classList.add('hidden');
-    }
-}
+
+<!-- Safe Data Injection -->
+<script type="application/json" id="productos-data">
+<?= json_encode(array_map(function($p) {
+    return [
+        'id' => $p['id'],
+        'nombre' => $p['nombre'] . ' (Stock: ' . $p['stock'] . ')' 
+    ];
+}, $productos), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>
 </script>
+
+<script type="application/json" id="proveedores-data">
+<?= json_encode(array_map(function($p) {
+    return [
+        'id' => $p['id'],
+        'nombre' => $p['nombre']
+    ];
+}, $proveedores), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>
+</script>
+
+<!-- Módulo de Movimientos (cargado desde archivo externo) -->
+<script src="<?= BASE_URL ?>js/pages/movimientos.js?v=<?= time() ?>"></script>

@@ -186,9 +186,9 @@ $buildUrl = function($page) use ($paginacion) {
                                         <button onclick='editarProveedor(<?= json_encode($p) ?>)' class="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-colors" title="Editar">
                                             <?= Icons::get('edit', 'w-4 h-4') ?>
                                         </button>
-                                        <form action="index.php?controlador=proveedor&accion=eliminar" method="POST" onsubmit="return confirm('¿Estás seguro de eliminar este proveedor?');" class="inline">
+                                        <form id="form-eliminar-<?= $p['id'] ?>" action="index.php?controlador=proveedor&accion=eliminar" method="POST" class="inline">
                                             <input type="hidden" name="id" value="<?= $p['id'] ?>">
-                                            <button type="submit" class="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Eliminar">
+                                            <button type="button" onclick="confirmarEliminar(<?= $p['id'] ?>)" class="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Eliminar">
                                                 <?= Icons::get('trash', 'w-4 h-4') ?>
                                             </button>
                                         </form>
@@ -277,10 +277,11 @@ $buildUrl = function($page) use ($paginacion) {
 <!-- Modal Editar (Solo estructura básica, lógica JS manejará la apertura) -->
 <div id="modal-editar-proveedor" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <!-- Backdrop -->
-    <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity opacity-0" id="modal-backdrop"></div>
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-sm transition-opacity opacity-0" id="modal-backdrop"></div>
 
     <!-- Panel -->
-    <div class="fixed inset-0 z-10 overflow-y-auto">
+    <div class="fixed inset-0 z-10 overflow-y-auto" onclick="if(event.target === this) toggleModal(false)">
         <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
             <div class="relative transform overflow-hidden rounded-2xl bg-white dark:bg-slate-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" id="modal-panel">
                 
@@ -336,69 +337,5 @@ $buildUrl = function($page) use ($paginacion) {
     </div>
 </div>
 
-<script>
-// Lógica básica modal
-function toggleModal(show) {
-    const modal = document.getElementById('modal-editar-proveedor');
-    const backdrop = document.getElementById('modal-backdrop');
-    const panel = document.getElementById('modal-panel');
-    
-    if (show) {
-        modal.classList.remove('hidden');
-        // Trigger animations
-        setTimeout(() => {
-            backdrop.classList.remove('opacity-0');
-            panel.classList.remove('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
-        }, 10);
-    } else {
-        backdrop.classList.add('opacity-0');
-        panel.classList.add('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-        }, 300);
-    }
-}
-
-function editarProveedor(p) {
-    document.getElementById('editar-prov-id').value = p.id;
-    document.getElementById('editar-prov-nombre').value = p.nombre;
-    document.getElementById('editar-prov-contacto').value = p.contacto;
-    document.getElementById('editar-prov-telefono').value = p.telefono;
-    document.getElementById('editar-prov-email').value = p.email;
-    
-    toggleModal(true);
-}
-
-document.getElementById('cancelar-modal-proveedor')?.addEventListener('click', () => toggleModal(false));
-
-// Interceptar submit para AJAX (opcional, pero buena práctica)
-document.getElementById('form-editar-proveedor')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = e.target.querySelector('button[type="submit"]');
-    const originalText = btn.textContent;
-    
-    try {
-        btn.disabled = true;
-        btn.textContent = 'Guardando...';
-        
-        const formData = new FormData(e.target);
-        const data = {};
-        formData.forEach((value, key) => data[key] = value);
-        
-        const response = await fetch('index.php?controlador=proveedor&accion=editar', {
-            method: 'POST',
-            body: formData
-        });
-        
-        // Asumiendo que el backend redirige o devuelve JSON. 
-        // Si devuelve HTML completo, recargamos.
-        window.location.reload();
-        
-    } catch (error) {
-        console.error(error);
-        alert('Error al guardar');
-        btn.disabled = false;
-        btn.textContent = originalText;
-    }
-});
-</script>
+<!-- Módulo de Proveedores (cargado desde archivo externo) -->
+<script src="<?= BASE_URL ?>js/pages/proveedores.js?v=<?= time() ?>"></script>

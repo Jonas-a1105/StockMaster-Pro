@@ -72,6 +72,10 @@ $buildUrl = function($page) use ($filtro) {
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-600">
+                    <?php 
+                    // Instanciar modelo fuera del loop para evitar múltiples conexiones
+                    $compraModelView = new \App\Models\CompraModel();
+                    ?>
                     <?php foreach ($compras as $c): 
                         $classVence = '';
                         $vence = new DateTime($c['fecha_vencimiento']);
@@ -79,8 +83,7 @@ $buildUrl = function($page) use ($filtro) {
                         if ($c['estado'] === 'Pendiente' && $vence < $hoy) $classVence = 'text-red-500 font-bold';
                         
                         // Items Logic
-                        $compraModel = new \App\Models\CompraModel();
-                        $items = $compraModel->obtenerItems($c['id']);
+                        $items = $compraModelView->obtenerItems($c['id']);
                         $itemsStr = implode(', ', array_map(fn($i) => $i['nombre_producto'] . ' (x' . $i['cantidad'] . ')', array_slice($items, 0, 3)));
                         if(count($items) > 3) $itemsStr .= '...';
                     ?>
@@ -92,7 +95,11 @@ $buildUrl = function($page) use ($filtro) {
                             <?= htmlspecialchars($c['proveedor_nombre']) ?>
                         </td>
                         <td class="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 max-w-xs truncate">
-                            <?= htmlspecialchars($itemsStr) ?>
+                            <?php if(empty($items)): ?>
+                                <span class="text-slate-300 dark:text-slate-500 italic">Sin detalle</span>
+                            <?php else: ?>
+                                <?= htmlspecialchars($itemsStr) ?>
+                            <?php endif; ?>
                         </td>
                         <td class="px-6 py-4 text-xs">
                             <div class="text-slate-600 dark:text-slate-300">Emit: <?= date('d/m/Y', strtotime($c['fecha_emision'])) ?></div>
@@ -123,34 +130,94 @@ $buildUrl = function($page) use ($filtro) {
                 </tbody>
             </table>
         </div>
+    <?php endif; ?>
+</div>
 
-        <!-- Paginación -->
-        <?php if (isset($totalPaginas) && $totalPaginas > 1): ?>
-        <div class="flex items-center justify-between p-4 border-t border-slate-100 dark:border-slate-600">
-            <p class="text-sm text-slate-500 dark:text-slate-400">
-                Página <span class="font-medium"><?= $paginaActual ?></span> de <span class="font-medium"><?= $totalPaginas ?></span>
-            </p>
-            <div class="flex gap-2">
-                <?php if ($paginaActual > 1): ?>
-                    <a href="<?= $buildUrl($paginaActual - 1) ?>" class="px-4 py-2 text-sm bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-500 text-slate-600 dark:text-slate-200 transition-colors">
-                        Anterior
-                    </a>
-                <?php endif; ?>
-                <?php if ($paginaActual < $totalPaginas): ?>
-                    <a href="<?= $buildUrl($paginaActual + 1) ?>" class="px-4 py-2 text-sm bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-500 text-slate-600 dark:text-slate-200 transition-colors">
-                        Siguiente
-                    </a>
-                <?php endif; ?>
-            </div>
-        </div>
+<!-- Paginación y Selector -->
+<div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-2">
+    
+    <!-- Selector de Límite -->
+    <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+        <span>Mostrar</span>
+        <select id="limit-selector"
+                data-setup-simple-select
+                onchange="window.location.href='index.php?controlador=compra&accion=index&limite=' + this.value + '&estado=<?= urlencode($filtro) ?>'"
+                class="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 py-1 px-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+            <?php 
+            $opciones = $opcionesLimite ?? [3, 5, 7, 10, 25, 50, 100];
+            $actual = $porPagina ?? 10;
+            foreach ($opciones as $op): 
+            ?>
+                <option value="<?= $op ?>" <?= $actual == $op ? 'selected' : '' ?>><?= $op ?></option>
+            <?php endforeach; ?>
+        </select>
+        <span>por página</span>
+    </div>
+
+    <!-- Controles de Paginación -->
+    <?php if ($totalPaginas > 1): ?>
+    <div class="flex items-center gap-1">
+        <?php 
+        $rango = 2; // Número de páginas a mostrar alrededor de la actual
+        $inicio = max(1, $paginaActual - $rango);
+        $fin = min($totalPaginas, $paginaActual + $rango);
+        
+        $prevUrl = "index.php?controlador=compra&accion=index&pagina=" . ($paginaActual - 1) . "&limite=$actual&estado=" . urlencode($filtro);
+        $nextUrl = "index.php?controlador=compra&accion=index&pagina=" . ($paginaActual + 1) . "&limite=$actual&estado=" . urlencode($filtro);
+        ?>
+
+        <!-- Anterior -->
+        <a href="<?= $prevUrl ?>" 
+           class="p-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors <?= $paginaActual <= 1 ? 'pointer-events-none opacity-50' : '' ?>">
+            <?= Icons::get('chevron-left', 'w-4 h-4 text-slate-600 dark:text-slate-300') ?>
+        </a>
+
+        <!-- Primera página si estamos lejos -->
+        <?php if ($inicio > 1): ?>
+            <a href="index.php?controlador=compra&accion=index&pagina=1&limite=<?= $actual ?>&estado=<?= urlencode($filtro) ?>" 
+               class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium transition-colors">
+                1
+            </a>
+            <?php if ($inicio > 2): ?>
+                <span class="px-2 text-slate-400">...</span>
+            <?php endif; ?>
         <?php endif; ?>
+
+        <!-- Páginas numeradas -->
+        <?php for ($i = $inicio; $i <= $fin; $i++): ?>
+            <a href="index.php?controlador=compra&accion=index&pagina=<?= $i ?>&limite=<?= $actual ?>&estado=<?= urlencode($filtro) ?>" 
+               class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all
+                      <?= $i == $paginaActual 
+                          ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' 
+                          : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600' ?>">
+                <?= $i ?>
+            </a>
+        <?php endfor; ?>
+
+        <!-- Última página si estamos lejos -->
+        <?php if ($fin < $totalPaginas): ?>
+            <?php if ($fin < $totalPaginas - 1): ?>
+                <span class="px-2 text-slate-400">...</span>
+            <?php endif; ?>
+            <a href="index.php?controlador=compra&accion=index&pagina=<?= $totalPaginas ?>&limite=<?= $actual ?>&estado=<?= urlencode($filtro) ?>" 
+               class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium transition-colors">
+                <?= $totalPaginas ?>
+            </a>
+        <?php endif; ?>
+
+        <!-- Siguiente -->
+        <a href="<?= $nextUrl ?>" 
+           class="p-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors <?= $paginaActual >= $totalPaginas ? 'pointer-events-none opacity-50' : '' ?>">
+            <?= Icons::get('chevron-left', 'w-4 h-4 text-slate-600 dark:text-slate-300') ?>
+        </a>
+    </div>
     <?php endif; ?>
 </div>
 
 <!-- Modal Confirmacion Pago -->
 <div id="modal-pago-compra" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity opacity-0" id="backdrop-pago"></div>
-    <div class="fixed inset-0 z-10 overflow-y-auto">
+    <div class="fixed inset-0 bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-sm transition-opacity opacity-0" id="backdrop-pago"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto" onclick="if(event.target === this) cerrarModalPago()">
         <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
             <div class="relative transform overflow-hidden rounded-2xl bg-white dark:bg-slate-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" id="panel-pago">
                 <div class="bg-white dark:bg-slate-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
@@ -185,31 +252,5 @@ $buildUrl = function($page) use ($filtro) {
     </div>
 </div>
 
-<script>
-function confirmarPagoCompra(id, factura) {
-    const modal = document.getElementById('modal-pago-compra');
-    const backdrop = document.getElementById('backdrop-pago');
-    const panel = document.getElementById('panel-pago');
-    
-    document.getElementById('pago-compra-id').value = id;
-    document.getElementById('pago-factura-ref').textContent = factura;
-    
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        backdrop.classList.remove('opacity-0');
-        panel.classList.remove('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
-    }, 10);
-}
-
-function cerrarModalPago() {
-    const modal = document.getElementById('modal-pago-compra');
-    const backdrop = document.getElementById('backdrop-pago');
-    const panel = document.getElementById('panel-pago');
-    
-    backdrop.classList.add('opacity-0');
-    panel.classList.add('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
-    setTimeout(() => {
-        modal.classList.add('hidden');
-    }, 300);
-}
-</script>
+<!-- Módulo de Lista de Compras (cargado desde archivo externo) -->
+<script src="<?= BASE_URL ?>js/pages/compras-index.js?v=<?= time() ?>"></script>

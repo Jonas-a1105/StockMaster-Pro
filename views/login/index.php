@@ -156,7 +156,7 @@ use App\Helpers\Icons;
                         <input type="checkbox" name="remember" class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 border bg-slate-50">
                         <span class="text-xs font-medium text-slate-500 group-hover:text-slate-700">Recordarme</span>
                     </label>
-                    <a href="#" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline">Recuperar clave</a>
+                    <a href="#" onclick="openRecoveryModal(event)" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline">Recuperar clave</a>
                 </div>
 
                 <button type="submit" id="btn-submit"
@@ -174,30 +174,159 @@ use App\Helpers\Icons;
         </div>
     </div>
 
-    <p class="text-[10px] text-slate-400 mt-8 font-medium fixed bottom-4">© 2025 StockMaster Solutions</p>
+    <p class="text-[10px] text-slate-400 mt-8 font-medium fixed bottom-4">© 2025 StockMaster Solutions <span class="opacity-50 mx-1">|</span> v<?= APP_VERSION ?></p>
 
     <!-- Global JS (for notifications) -->
     <script src="<?= BASE_URL ?>js/core/utils.js?v=<?= time() ?>"></script>
+    <script src="<?= BASE_URL ?>js/core/notifications.js?v=<?= time() ?>"></script>
     <script src="<?= BASE_URL ?>js/app.js?v=<?= time() ?>"></script>
     
-    <script>
-        // Inline script for specific login behavior
-        document.getElementById('login-form').addEventListener('submit', function(e) {
-            const btn = document.getElementById('btn-submit');
-            const text = document.getElementById('btn-text');
-            const icon = document.getElementById('btn-icon');
-            const loader = document.getElementById('btn-loader');
-            const loadingScreen = document.getElementById('loading-screen');
+    <!-- Módulo de Autenticación (cargado desde archivo externo) -->
+    <script src="<?= BASE_URL ?>js/pages/auth.js?v=<?= time() ?>"></script>
+    <script src="<?= BASE_URL ?>js/electron-bridge.js?v=<?= time() ?>"></script>
 
-            // Show Button Loading State
-            text.textContent = 'Verificando...';
-            icon.classList.add('hidden');
-            loader.classList.remove('hidden');
+        
+    <!-- Modal Recuperación -->
+    <div id="modal-recovery" class="fixed inset-0 z-[100] hidden">
+        <!-- Backdrop (System Standard) -->
+        <div class="absolute inset-0 bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-sm transition-opacity" onclick="closeRecoveryModal()"></div>
+        
+        <!-- Wrapper for Flex Centering -->
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <!-- Content -->
+            <div class="w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 text-center relative overflow-hidden animate-in zoom-in-95 duration-300">
+                <!-- Header -->
+                <div class="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-3 text-indigo-600">
+                    <?= Icons::get('lock', 'w-6 h-6') ?>
+                </div>
+                
+                <h3 class="text-lg font-bold text-slate-800 mb-1">Desbloqueo por Soporte</h3>
+                <p class="text-xs text-slate-500 mb-4 px-2">
+                    Proporciona el siguiente código al administrador para recibir tu clave de autorización.
+                </p>
+                
+                <!-- Challenge Code Display -->
+                <div class="bg-slate-900 rounded-xl p-3 mb-4 shadow-inner">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">TU CÓDIGO DE SOLICITUD</p>
+                    <div class="flex items-center justify-between px-2">
+                        <span id="challenge-code" class="text-2xl font-mono font-bold text-white tracking-wider mx-auto">CARGANDO...</span>
+                    </div>
+                </div>
+
+                <!-- Form -->
+                <form onsubmit="realizarDesbloqueo(event)" class="space-y-3">
+                    <div class="text-left">
+                        <label class="block text-xs font-bold text-slate-600 mb-1 ml-1">Usuario a Recuperar</label>
+                        <input type="text" id="unlock-username" required
+                               class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder-slate-400"
+                               placeholder="Ej. admin">
+                    </div>
+
+                    <div class="text-left">
+                        <label class="block text-xs font-bold text-slate-600 mb-1 ml-1">Código de Autorización</label>
+                        <input type="text" id="unlock-response" required
+                               class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono uppercase tracking-widest focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder-slate-400"
+                               placeholder="XXXXXX">
+                    </div>
+
+                    <div id="unlock-msg" class="hidden text-xs font-medium text-center p-2 rounded-lg"></div>
+
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        <button type="button" onclick="closeRecoveryModal()" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-medium hover:bg-slate-50 text-sm transition-colors">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-500/20 transition-colors">
+                            Desbloquear
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Modal -->
+    <script>
+        // Generador de Challenge Aleatorio (4Chars-4Chars)
+        function generateChallenge() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I, O, 0, 1 for clarity
+            let result = '';
+            for (let i = 0; i < 8; i++) {
+                if(i===4) result += '-';
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function openRecoveryModal(e) {
+            e.preventDefault();
+            const challenge = generateChallenge();
+            document.getElementById('challenge-code').textContent = challenge;
+            // Pre-fill username from main form if exists
+            const mainUser = document.querySelector('input[name="username"]')?.value;
+            if(mainUser) document.getElementById('unlock-username').value = mainUser;
+            
+            document.getElementById('modal-recovery').classList.remove('hidden');
+            document.getElementById('unlock-response').value = '';
+            document.getElementById('unlock-msg').classList.add('hidden');
+        }
+
+        function closeRecoveryModal() {
+            document.getElementById('modal-recovery').classList.add('hidden');
+        }
+
+        async function realizarDesbloqueo(e) {
+            e.preventDefault();
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.innerText = 'Verificando...';
             btn.disabled = true;
 
-            // Optional: Show full screen loader if you prefer that over button loading
-            // loadingScreen.classList.remove('hidden');
-        });
+            const challenge = document.getElementById('challenge-code').textContent;
+            const responseCode = document.getElementById('unlock-response').value.trim().toUpperCase();
+            const username = document.getElementById('unlock-username').value.trim();
+
+            try {
+                const formData = new FormData();
+                formData.append('challenge', challenge);
+                formData.append('response', responseCode);
+                formData.append('username', username);
+
+                const res = await fetch('index.php?controlador=login&accion=verificarDesbloqueo', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await res.json();
+                
+                const msgBox = document.getElementById('unlock-msg');
+                msgBox.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'bg-emerald-50', 'text-emerald-600');
+                
+                if (data.success) {
+                    msgBox.classList.add('bg-emerald-50', 'text-emerald-600');
+                    msgBox.textContent = data.message;
+                    // Success!
+                    setTimeout(() => {
+                        if (window.Notifications) {
+                            window.Notifications.show(data.message, 'success');
+                        } else {
+                            alert(data.message);
+                        }
+                        closeRecoveryModal();
+                    }, 1500);
+                } else {
+                    msgBox.classList.add('bg-red-50', 'text-red-600');
+                    msgBox.textContent = data.message;
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert('Error de conexión');
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>

@@ -3,11 +3,46 @@
  * CHARTS.JS - Gráficos del Dashboard
  * =========================================================================
  * Lógica para renderizar gráficos con Chart.js
+ * Incluye carga dinámica de Chart.js para navegación SPA
  */
 
 // Referencias a instancias de gráficos
 let chartValorCategoria = null;
 let chartStockCategoria = null;
+
+// URL del CDN de Chart.js
+const CHARTJS_URL = 'https://cdn.jsdelivr.net/npm/chart.js';
+
+/**
+ * Carga Chart.js dinámicamente si no está disponible
+ * @returns {Promise<boolean>} true si Chart.js está listo
+ */
+async function ensureChartJS() {
+    // Si ya está cargado, no hacer nada
+    if (typeof Chart !== 'undefined') {
+        return true;
+    }
+
+    console.log('Chart.js no encontrado, cargando dinámicamente...');
+
+    return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = CHARTJS_URL;
+        script.async = true;
+
+        script.onload = () => {
+            console.log('Chart.js cargado exitosamente');
+            resolve(true);
+        };
+
+        script.onerror = () => {
+            console.error('Error cargando Chart.js desde CDN');
+            resolve(false);
+        };
+
+        document.head.appendChild(script);
+    });
+}
 
 /**
  * Actualiza los gráficos del dashboard
@@ -15,6 +50,13 @@ let chartStockCategoria = null;
 async function actualizarCharts() {
     const canvasValor = document.getElementById('chartValorCategoria');
     if (!canvasValor) return;
+
+    // Asegurar que Chart.js esté disponible
+    const chartReady = await ensureChartJS();
+    if (!chartReady) {
+        console.warn('No se pudo cargar Chart.js. Los gráficos no se mostrarán.');
+        return;
+    }
 
     try {
         const response = await fetch('index.php?controlador=dashboard&accion=apiDatosGraficos');
@@ -119,8 +161,10 @@ function destruirCharts() {
 // Exportar al scope global
 window.Charts = {
     update: actualizarCharts,
-    destroy: destruirCharts
+    destroy: destruirCharts,
+    ensureLoaded: ensureChartJS
 };
 
 // Compatibilidad
 window.actualizarCharts = actualizarCharts;
+window.ensureChartJS = ensureChartJS;

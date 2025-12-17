@@ -38,7 +38,7 @@ $tipoReporte = $filtros['reporte-tipo'] ?? 'valor-inventario';
                 <!-- Tipo Reporte -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Tipo de Reporte</label>
-                    <select id="reporte-tipo" name="reporte-tipo" onchange="toggleReportFilters()" 
+                    <select id="reporte-tipo" name="reporte-tipo" onchange="toggleReportFilters()" data-setup-simple-select
                             class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
                         <option value="valor-inventario" <?= $tipoReporte == 'valor-inventario' ? 'selected' : '' ?>>
                             Valor de Inventario
@@ -55,7 +55,7 @@ $tipoReporte = $filtros['reporte-tipo'] ?? 'valor-inventario';
                 <!-- Producto (Condicional) -->
                 <div id="reporte-producto-group" class="<?= $tipoReporte == 'movimientos-producto' ? '' : 'hidden' ?>">
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Producto</label>
-                    <select id="reporte-producto" name="reporte-producto" 
+                    <select id="reporte-producto" name="reporte-producto" data-setup-simple-select
                             class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
                         <option value="0">Seleccionar...</option>
                         <?php foreach ($productos as $producto): ?>
@@ -163,21 +163,5 @@ $tipoReporte = $filtros['reporte-tipo'] ?? 'valor-inventario';
     </div>
 </div>
 
-<script>
-function toggleReportFilters() {
-    const tipo = document.getElementById('reporte-tipo').value;
-    const groupProd = document.getElementById('reporte-producto-group');
-    const groupFechas = document.getElementById('reporte-fechas-group');
-    
-    if (tipo === 'movimientos-producto') {
-        groupProd.classList.remove('hidden');
-        groupFechas.classList.remove('hidden');
-    } else if (tipo === 'movimientos-general') {
-        groupProd.classList.add('hidden');
-        groupFechas.classList.remove('hidden');
-    } else {
-        groupProd.classList.add('hidden');
-        groupFechas.classList.add('hidden');
-    }
-}
-</script>
+<!-- Módulo de Reportes (cargado desde archivo externo) -->
+<script src="<?= BASE_URL ?>js/pages/reportes.js?v=<?= time() ?>"></script>

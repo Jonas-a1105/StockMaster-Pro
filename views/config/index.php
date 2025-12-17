@@ -180,13 +180,5 @@ $config = $config ?? [];
     </div>
 </div>
 
-<script>
-function previewLogo(input) {
-    const fileName = document.getElementById('file-name');
-    if (input.files && input.files[0]) {
-        fileName.textContent = input.files[0].name;
-    } else {
-        fileName.textContent = 'Ningún archivo seleccionado';
-    }
-}
-</script>
+<!-- Módulo de Configuración (cargado desde archivo externo) -->
+<script src="<?= BASE_URL ?>js/pages/config.js?v=<?= time() ?>"></script>

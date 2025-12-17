@@ -1,7 +1,7 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     Options -MultiViews
-    RewriteBase /inventario_oop/public/
+    # RewriteBase /inventario_oop/public/ (Comentado para portabilidad)
     # Excluir carpetas de estáticos de la reescritura (Siempre primero)
     RewriteRule ^(css|js|img|fonts|favicon\.ico) - [L,NC]
 

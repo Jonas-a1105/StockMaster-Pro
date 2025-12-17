@@ -108,16 +108,13 @@ $usuarios = $usuarios ?? [];
                                     <?php if ($usuario['plan'] === 'free'): ?>
                                         <input type="hidden" name="accion" value="premium">
                                         <div class="relative">
-                                            <select name="duracion" class="appearance-none pl-3 pr-8 py-1.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-xs font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                                            <select name="duracion" data-setup-simple-select class="appearance-none pl-3 pr-8 py-1.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-xs font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
                                                 <option value="15">15 Días</option>
                                                 <option value="30" selected>1 Mes</option>
                                                 <option value="90">3 Meses</option>
                                                 <option value="365">1 Año</option>
                                                 <option value="permanent">Permanente</option>
                                             </select>
-                                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-                                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                                            </div>
                                         </div>
                                         <button type="submit" class="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors" title="Activar Premium">
                                             <?= Icons::get('check', 'w-4 h-4') ?>

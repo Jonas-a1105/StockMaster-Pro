@@ -16,7 +16,7 @@
 
         <div class="inline-flex items-center gap-3 px-4 py-2 bg-slate-50 border border-slate-200 rounded-full mb-8">
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span class="text-sm font-semibold text-slate-600">Versión 1.0.0 (Enterprise)</span>
+            <span class="text-sm font-semibold text-slate-600">Versión <?= defined('APP_VERSION') ? APP_VERSION : '1.0.0' ?> (Enterprise)</span>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto border-t border-slate-100 pt-8">

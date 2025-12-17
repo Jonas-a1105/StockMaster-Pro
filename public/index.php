@@ -19,6 +19,30 @@ $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
 $baseUrl = rtrim($scriptDir, '/\\') . '/';
 define('BASE_URL', $baseUrl);
 
+// Detectar Versión de la App (desde package.json)
+// Detectar Versión de la App (desde package.json)
+$packageJsonPath = __DIR__ . '/../package.json';
+$appVersion = '1.0.8'; // Valor por defecto
+
+// Intentar rutas alternativas si la principal falla (para producción vs desarrollo)
+$posiblesRutas = [
+    __DIR__ . '/../package.json',           // Desarrollo / Estándar
+    __DIR__ . '/../../package.json',        // Alternativa profundidad
+    dirname(__DIR__) . '/package.json'      // Otra forma de llegar al root
+];
+
+foreach ($posiblesRutas as $ruta) {
+    if (file_exists($ruta)) {
+        $packageContent = file_get_contents($ruta);
+        $packageData = json_decode($packageContent, true);
+        if ($packageData && isset($packageData['version'])) {
+            $appVersion = $packageData['version'];
+            break; // Encontramos la versión, salir del loop
+        }
+    }
+}
+define('APP_VERSION', $appVersion);
+
 function redirect($ruta) {
     // Asegurar que la sesión se guarde antes de redirigir
     if (session_status() === PHP_SESSION_ACTIVE) {
@@ -56,7 +80,7 @@ if ($controladorNombre === 'admin' && ($_SESSION['user_rol'] ?? 'usuario') !== '
 
 // Chequeo de Páginas Públicas
 $paginasPublicas = [
-    'login' => ['index', 'verificar', 'logout', 'bienvenida'],
+    'login' => ['index', 'verificar', 'logout', 'bienvenida', 'verificarDesbloqueo'],
     'registro' => ['index', 'guardar'],
     'password' => ['request', 'send', 'reset', 'update'],
     'webhook' => ['recibir']
@@ -110,6 +134,30 @@ if (!isset($_SESSION['user_id'])) {
     }
 } else {
     // Si el usuario SÍ está logueado
+    
+    // 7.5 Verificación de Licencia (Sistema Enterprise)
+    // Bloquear acceso a módulos Premium si la licencia no es válida.
+    // WHITELIST: Controladores permitidos para todos (incluso sin licencia/free)
+    $whitelist = ['license', 'free', 'ayuda', 'perfil', 'acerca'];
+    
+    if (!in_array($controladorNombre, $whitelist) && $accion !== 'logout') {
+        if (!\App\Helpers\LicenseHelper::validarEstado()) {
+            // Si la licencia falló o expiró, hacemos downgrade inmediato
+            if (isset($_SESSION['user_plan']) && $_SESSION['user_plan'] === 'premium') {
+                $_SESSION['user_plan'] = 'free';
+                
+                // Actualizar DB para persistencia
+                if (isset($_SESSION['user_id'])) {
+                    $uModel = new \App\Models\UsuarioModel();
+                    $uModel->actualizarPlan($_SESSION['user_id'], 'free');
+                }
+                Session::flash('error', 'Tu licencia ha expirado. Por favor, renuevala.');
+            }
+
+            // Redirigir a la vista de bloqueo
+            redirect('index.php?controlador=free');
+        }
+    }
     
     if ($controladorNombre === null) {
         // Si es free, su página por defecto es 'free', si es premium es 'dashboard'

@@ -1,16 +1,26 @@
 const { app, BrowserWindow, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
-
-// ... (rest of imports)
-
+const path = require('path');
+const { spawn, execSync } = require('child_process');
 const log = require('electron-log');
+const fs = require('fs');
+
+// Logging Setup
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = 'info';
 
+let mainWindow;
+let phpServer;
+const PHP_PORT = 8000;
+
 // --- AUTO UPDATE LOGIC ---
 function setupAutoUpdater() {
-    log.info('App starting...');
-    autoUpdater.checkForUpdatesAndNotify();
+    log.info(`App starting... v${app.getVersion()}`);
+
+    // Check for updates immediately
+    if (app.isPackaged) {
+        autoUpdater.checkForUpdatesAndNotify();
+    }
 
     autoUpdater.on('checking-for-update', () => {
         log.info('Checking for update...');
@@ -18,6 +28,10 @@ function setupAutoUpdater() {
 
     autoUpdater.on('update-available', (info) => {
         log.info('Update available.', info);
+        if (mainWindow) {
+            // Send event to renderer instead of native dialog
+            mainWindow.webContents.send('update-available', info);
+        }
     });
 
     autoUpdater.on('update-not-available', (info) => {
@@ -26,6 +40,9 @@ function setupAutoUpdater() {
 
     autoUpdater.on('error', (err) => {
         log.error('Error in auto-updater. ' + err);
+        if (mainWindow) {
+            mainWindow.webContents.send('update-error', err.toString());
+        }
     });
 
     autoUpdater.on('download-progress', (progressObj) => {
@@ -33,197 +50,139 @@ function setupAutoUpdater() {
         log_message = log_message + ' - Downloaded ' + progressObj.percent + '%';
         log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
         log.info(log_message);
+        if (mainWindow) {
+            mainWindow.setProgressBar(progressObj.percent / 100);
+            // Send progress to renderer
+            mainWindow.webContents.send('download-progress', progressObj);
+        }
     });
 
     autoUpdater.on('update-downloaded', (info) => {
         log.info('Update downloaded', info);
-        dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            buttons: ['Reiniciar e Instalar', 'Más tarde'],
-            title: 'Actualización Disponible',
-            message: 'Una nueva versión se ha descargado. ¿Deseas reiniciar ahora para instalarla?'
-        }).then(result => {
-            if (result.response === 0) {
-                autoUpdater.quitAndInstall();
-            }
-        });
-    });
-}
-
-// ... (createWindow function)
-
-const gotTheLock = app.requestSingleInstanceLock();
-
-if (!gotTheLock) {
-    app.quit();
-} else {
-    app.on('second-instance', (event, commandLine, workingDirectory) => {
-        // Someone tried to run a second instance, we should focus our window.
         if (mainWindow) {
-            if (mainWindow.isMinimized()) mainWindow.restore();
-            mainWindow.focus();
+            mainWindow.setProgressBar(-1);
+            // Send ready event to renderer
+            mainWindow.webContents.send('update-downloaded', info);
         }
     });
+}
+// Listen for restart command from renderer
+const { ipcMain } = require('electron');
+ipcMain.on('restart_app', () => {
+    app.isQuiting = true;
+    autoUpdater.quitAndInstall();
+});
 
-    app.whenReady().then(async () => {
+// --- PHP SERVER LOGIC ---
+function startPhpServer() {
+    let phpPath = 'php'; // Default system PHP for dev
+    let documentRoot = path.join(__dirname, 'public');
+    let dbSourcePath = path.join(__dirname, 'database', 'database.sqlite'); // Fuente original
+
+    if (app.isPackaged) {
+        // In production: resources/bin/php/php.exe
+        phpPath = path.join(process.resourcesPath, 'bin', 'php', 'php.exe');
+        documentRoot = path.join(process.resourcesPath, 'public');
+        dbSourcePath = path.join(process.resourcesPath, 'database', 'database.sqlite');
+    }
+
+    // --- MIGRACIÓN A CARPETA SEGURA (APPDATA) ---
+    // UserData: C:\Users\Usuario\AppData\Roaming\stockmaster-pro-desktop
+    const safeUserDataPath = app.getPath('userData');
+    const safeDbDir = path.join(safeUserDataPath, 'database');
+    const safeDbPath = path.join(safeDbDir, 'database.sqlite');
+
+    log.info(`Checking Database... Safe Path: ${safeDbPath}`);
+
+    // Asegurar que existe la carpeta en AppData
+    if (!fs.existsSync(safeDbDir)) {
+        fs.mkdirSync(safeDbDir, { recursive: true });
+    }
+
+    // Si NO existe la DB en AppData, copiarla desde la instalación
+    if (!fs.existsSync(safeDbPath)) {
+        log.info('Database not found in AppData. Migrating from resources...');
         try {
-            await startPHPServer();
-            createWindow();
-            setupAutoUpdater(); // Initialize Updater
-        } catch (e) {
-            console.error('Failed to start:', e);
-        }
-    });
-}
-const path = require('path');
-const { spawn } = require('child_process');
-const fs = require('fs');
-
-let mainWindow;
-let phpServer;
-const PHP_PORT = 8000;
-const HOST = '127.0.0.1';
-
-// Determine Environment
-const isDev = !app.isPackaged;
-const appPath = app.getAppPath(); // In production: .../resources/app.asar
-
-// Logic to find PHP binary
-let phpBin;
-if (isDev) {
-    // Development: Use system PHP (XAMPP or Global)
-    phpBin = 'php';
-    console.log('Development Mode: Using system PHP');
-} else {
-    // Production: Use bundled PHP in /bin
-    // resources/bin/php/php.exe
-    const basePath = path.dirname(appPath); // .../resources
-    phpBin = path.join(basePath, 'bin', 'php', 'php.exe');
-    console.log('Production Mode: Using bundled PHP at', phpBin);
-}
-
-function startPHPServer() {
-    return new Promise((resolve, reject) => {
-        // Root dir for PHP server
-        // In dev: project root
-        // In prod: .../resources/ (we unpacked 'public', 'src', etc here via extraResources)
-        // OR we map it to just inside app.asar if we included it there?
-        // package.json says we copy public/src to extraResources root? 
-        // No, usually "to": "bin" means /resources/bin. "to": "public" means /resources/public.
-
-        let docRoot;
-        let dbPath;
-
-        if (isDev) {
-            // Development
-            docRoot = path.join(__dirname, 'public');
-            dbPath = path.join(__dirname, 'database', 'database.sqlite');
-        } else {
-            // Production
-            // 1. Files are in resources/app.asar.unpacked (physically present for PHP)
-            // __dirname in prod is inside app.asar. We need to get out.
-            // process.resourcesPath = .../resources
-            docRoot = path.join(process.resourcesPath, 'public');
-
-            // 2. Database Handling (Move to UserData to be writable and hidden)
-            const userDataPath = app.getPath('userData'); // C:\Users\User\AppData\Roaming\sistema-inventario
-            const targetDbPath = path.join(userDataPath, 'database.sqlite');
-
-            // Check if DB exists in UserData, if not, copy from resources
-            if (!fs.existsSync(targetDbPath)) {
-                // Template DB in unpacked resources
-                const sourceDbPath = path.join(process.resourcesPath, 'database', 'database.sqlite');
-                console.log('Deploying Database to:', targetDbPath);
-                try {
-                    fs.copyFileSync(sourceDbPath, targetDbPath);
-                } catch (err) {
-                    console.error('Error copying DB:', err);
-                }
+            if (fs.existsSync(dbSourcePath)) {
+                fs.copyFileSync(dbSourcePath, safeDbPath);
+                log.info('Database migrated successfully!');
+            } else {
+                log.error('Original database not found in resources! Creating empty?');
+                // Aquí podrías crear una vacía si fuera necesario
             }
-            dbPath = targetDbPath;
+        } catch (err) {
+            log.error('Error migrating database: ' + err);
         }
+    } else {
+        log.info('Database found in AppData. Using existing file.');
+    }
 
-        // DEBUGGING: Write specific debug log to UserData to inspect paths
-        const debugLogPath = path.join(app.getPath('userData'), 'debug_boot.txt');
-        const logDebug = (msg) => {
-            try { fs.appendFileSync(debugLogPath, new Date().toISOString() + ': ' + msg + '\n'); } catch (e) { }
-        };
+    log.info(`Starting PHP Server... Path: ${phpPath}, Root: ${documentRoot}, DB: ${safeDbPath}`);
 
-        logDebug('--- STARTUP 1.0.4 ---');
-        logDebug('Resources Path: ' + process.resourcesPath);
-        logDebug('DocRoot: ' + docRoot);
-        logDebug('DocRoot Exists: ' + fs.existsSync(docRoot));
-        logDebug('PHP Bin: ' + phpBin);
-        logDebug('PHP Bin Exists: ' + fs.existsSync(phpBin));
-        logDebug('DB Path: ' + dbPath);
-        logDebug('CWD: ' + (isDev ? __dirname : process.resourcesPath));
+    // Configuración de Entorno para PHP (SQLite)
+    const env = Object.create(process.env);
+    env.DB_CONNECTION = 'sqlite';
+    env.DB_DATABASE = safeDbPath; // <--- USAR LA RUTA SEGURA
+    // Forzar modo producción si está empaquetado para evitar errores de visualización de debug
+    if (app.isPackaged) {
+        env.APP_ENV = 'production';
+        env.DISPLAY_ERRORS = '0';
+    }
 
-        console.log('Starting PHP Server...');
-        // console.log('Binary:', phpBin);
-        // console.log('DocRoot:', docRoot);
+    phpServer = spawn(phpPath, ['-S', `127.0.0.1:${PHP_PORT}`, '-t', documentRoot], {
+        cwd: app.isPackaged ? process.resourcesPath : __dirname,
+        env: env // Inyectar variables de entorno
+    });
 
-        const env = Object.create(process.env);
-        env.DB_CONNECTION = 'sqlite';
-        env.DB_DATABASE = dbPath;
+    phpServer.stdout.on('data', (data) => {
+        log.info(`PHP Out: ${data}`);
+    });
 
-        // console.log('DB Path:', dbPath);
+    phpServer.stderr.on('data', (data) => {
+        log.error(`PHP Err: ${data}`);
+    });
 
-        phpServer = spawn(phpBin, ['-S', `${HOST}:${PHP_PORT}`, '-t', docRoot], {
-            env: env,
-            cwd: isDev ? __dirname : process.resourcesPath,
-            windowsHide: true // Hide the PHP console window on Windows
-        });
-
-        // Suppress PHP logs in the console (uncomment for debugging)
-        // phpServer.stdout.on('data', (data) => console.log(`PHP: ${data}`));
-        // phpServer.stderr.on('data', (data) => console.error(`PHP Error: ${data}`));
-
-        phpServer.on('close', (code) => {
-            console.log(`PHP Server exited with code ${code}`);
-        });
-
-        // Give it a moment to verify it started
-        setTimeout(resolve, 1000);
+    phpServer.on('close', (code) => {
+        log.info(`PHP Server exited with code ${code}`);
     });
 }
 
+// --- WINDOW CREATION ---
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 1280,
+        width: 1000,
         height: 800,
-        minWidth: 400,
-        minHeight: 600,
-        icon: path.join(__dirname, 'public/img/favicon.ico'),
+        minWidth: 1024,
+        minHeight: 768,
+        title: "StockMaster Pro",
+        icon: path.join(__dirname, 'public/img/StockMasterPro.ico'),
         webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true
-        },
-        autoHideMenuBar: true,
-        backgroundColor: '#eef2f6', // Match body bg
-        show: false // Wait until ready to show to avoid white flash
+            nodeIntegration: true,
+            contextIsolation: false // Allowing node in renderer for verify features if needed
+        }
     });
 
-    // mainWindow.webContents.openDevTools(); // Uncomment for debug
+    // Remove default menu
+    mainWindow.setMenuBarVisibility(false);
 
-    mainWindow.once('ready-to-show', () => {
-        mainWindow.show();
+    // Load PHP Server URL
+    mainWindow.loadURL(`http://127.0.0.1:${PHP_PORT}`);
+
+    // setupAutoUpdater(); // Call updater setup
+
+    // --- IPC LISTENERS ---
+    const { ipcMain } = require('electron');
+    ipcMain.on('confirm-exit', () => {
+        app.isQuiting = true;
+        app.quit();
     });
-
-    mainWindow.loadURL(`http://${HOST}:${PHP_PORT}`);
 
     mainWindow.on('close', (e) => {
-        const choice = dialog.showMessageBoxSync(mainWindow, {
-            type: 'question',
-            buttons: ['Sí', 'No'],
-            title: 'Confirmar Salida',
-            message: '¿Estás seguro de que quieres salir de la aplicación?',
-            defaultId: 0,
-            cancelId: 1
-        });
+        if (app.isQuiting) return;
 
-        if (choice === 1) {
-            e.preventDefault();
-        }
+        // Prevenir cierre y mostrar modal HTML
+        e.preventDefault();
+        mainWindow.webContents.send('show-exit-confirm');
     });
 
     mainWindow.on('closed', () => {
@@ -231,15 +190,26 @@ function createWindow() {
     });
 }
 
-app.whenReady().then(async () => {
-    try {
-        await startPHPServer();
-        createWindow();
-        setupAutoUpdater(); // Initialize Updater
-    } catch (e) {
-        console.error('Failed to start:', e);
-    }
-});
+// --- APP LIFECYCLE ---
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+    app.quit();
+} else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+        }
+    });
+
+    app.whenReady().then(() => {
+        startPhpServer();
+        // Give PHP a moment to start?
+        setTimeout(createWindow, 500);
+        setTimeout(setupAutoUpdater, 3000); // Check for updates after launch
+    });
+}
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
@@ -248,18 +218,12 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+    app.isQuiting = true;
     if (phpServer) {
-        // Aggressive kill for Windows - SYNCHRONOUS
         if (process.platform === 'win32') {
             try {
-                const { execSync } = require('child_process');
                 execSync(`taskkill /pid ${phpServer.pid} /T /F`);
-            } catch (e) {
-                // Ignore error if process already dead
-                // Fallback: Kill all phantom php.exe started by this user if PID failed?
-                // Better safe than sorry? No, too risky. Stick to PID.
-                console.error('Error killing PHP:', e);
-            }
+            } catch (e) { /* ignore */ }
         } else {
             phpServer.kill();
         }

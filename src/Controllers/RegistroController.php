@@ -32,7 +32,7 @@ class RegistroController {
         }
         
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-        $plan = 'premium'; 
+        $plan = 'free'; // Inicialmente en plan gratuito (inactivo)
         
         $db = Database::conectar();
         
@@ -44,8 +44,8 @@ class RegistroController {
              redirect('index.php?controlador=registro');
         }
 
-        // Calcular fecha de expiración (30 días de prueba)
-        $trial_ends_at = date('Y-m-d H:i:s', strtotime('+30 days'));
+        // Sin periodo de prueba automático
+        $trial_ends_at = null;
 
         try {
             // Explicitly set rol to 'usuario'

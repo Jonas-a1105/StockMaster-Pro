@@ -8,6 +8,16 @@ class Session {
             if (!is_dir(sys_get_temp_dir())) {
                 mkdir(sys_get_temp_dir(), 0777, true);
             }
+            // PARCHE DE SEGURIDAD: Cookies robustas
+            session_set_cookie_params([
+                'lifetime' => 0,
+                'path' => '/',
+                'domain' => '', // Dominio actual
+                'secure' => false, // True solo si hay HTTPS (En localhost/XAMPP suele ser false)
+                'httponly' => true, // Previene acceso via JS (XSS)
+                'samesite' => 'Strict' // Previene CSRF
+            ]);
+            
             session_save_path(sys_get_temp_dir());
             session_start();
         }
@@ -44,5 +54,13 @@ class Session {
     public static function hasFlash() {
         self::init();
         return isset($_SESSION['flash']) && !empty($_SESSION['flash']);
+    }
+
+    /**
+     * Verifica si el usuario está logueado
+     */
+    public static function isLoggedIn() {
+        self::init();
+        return isset($_SESSION['user_id']);
     }
 }

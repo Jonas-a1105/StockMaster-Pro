@@ -25,11 +25,11 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        /* Animaciones suaves */
-        .fade-in { animation: fadeIn 0.3s ease-out; }
+        /* Animaciones suaves - Aceleradas para igualar TurboNav */
+        .fade-in { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: scale(0.98) translateY(-5px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
         
         .slide-up { animation: slideUp 0.3s ease-out; }
@@ -136,7 +136,7 @@
     <!-- CONTENEDOR PRINCIPAL (Boxed Layout) -->
     <main class="max-w-[1440px] mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-6">
         <!-- Caja Principal -->
-        <div class="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-[32px] border border-slate-200 dark:border-slate-700 shadow-soft min-h-[calc(100vh-140px)] sm:min-h-[calc(100vh-180px)] flex flex-col overflow-hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-[32px] border border-slate-200 dark:border-slate-700 shadow-soft min-h-[calc(100vh-140px)] sm:min-h-[calc(100vh-180px)] flex flex-col overflow-visible">
             
             <!-- Contenido de la Vista -->
             <div class="flex-1 p-4 sm:p-6 lg:p-8">
@@ -167,8 +167,10 @@
     
     <!-- Modal Logout -->
     <div id="modal-logout" class="hidden fixed inset-0 z-[100]">
-        <div class="fixed inset-0 bg-slate-900/50 glass" onclick="closeModal('modal-logout')"></div>
-        <div class="fixed inset-0 flex items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-sm transition-opacity"></div>
+        <!-- Wrapper -->
+        <div class="fixed inset-0 flex items-center justify-center p-4" onclick="if(event.target === this) closeModal('modal-logout')">
             <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 relative fade-in">
                 <div class="text-center">
                     <div class="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
@@ -191,8 +193,10 @@
     
     <!-- Modal Confirmar Eliminar -->
     <div id="modal-confirmar-eliminar" class="hidden fixed inset-0 z-[100]">
-        <div class="fixed inset-0 bg-slate-900/50 glass" onclick="closeModal('modal-confirmar-eliminar')"></div>
-        <div class="fixed inset-0 flex items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-sm transition-opacity"></div>
+        <!-- Wrapper -->
+        <div class="fixed inset-0 flex items-center justify-center p-4" onclick="if(event.target === this) closeModal('modal-confirmar-eliminar')">
             <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 relative fade-in">
                 <div class="text-center">
                     <div class="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
@@ -216,136 +220,38 @@
     <!-- Toast Notification -->
     <div id="toast-container" class="fixed bottom-6 right-6 z-[200] space-y-2"></div>
     
+    <!-- Flash Messages (Bridge to JS) -->
+    <?php 
+        // Verificar si hay mensajes flash en la sesión y pasarlos al JS
+        use App\Core\Session;
+        if (Session::hasFlash()) {
+            $flashMsg = '';
+            $flashType = 'success';
+            
+            if ($msg = Session::getFlash('success')) {
+                $flashMsg = $msg;
+                $flashType = 'success';
+            } elseif ($msg = Session::getFlash('error')) {
+                $flashMsg = $msg;
+                $flashType = 'error';
+            } elseif ($msg = Session::getFlash('warning')) {
+                $flashMsg = $msg;
+                $flashType = 'warning';
+            }
+            
+            if ($flashMsg) {
+                echo "<div id='flash-data' data-message='" . htmlspecialchars($flashMsg, ENT_QUOTES) . "' data-type='" . $flashType . "' class='hidden'></div>";
+            }
+        }
+    ?>
+    
     <!-- SCRIPTS -->
     <!-- SCRIPTS -->
     <?php require __DIR__ . '/../partials/scripts.php'; ?>
     
     <!-- Enterprise UI Scripts -->
-    <script>
-        // === DROPDOWNS ===
-        function setupDropdown(btnId, dropdownId, containerId) {
-            const btn = document.getElementById(btnId);
-            const dropdown = document.getElementById(dropdownId);
-            const container = document.getElementById(containerId);
-            
-            if (!btn || !dropdown) return;
-            
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                dropdown.classList.toggle('hidden');
-            });
-            
-            document.addEventListener('click', (e) => {
-                if (container && !container.contains(e.target)) {
-                    dropdown.classList.add('hidden');
-                }
-            });
-        }
-        
-        // === MODALES ===
-        // La lógica de modales ahora se maneja centralizadamente en js/modules/modals.js
-        // para garantizar el comportamiento de "Portal" y z-index correcto.
-
-        
-        // === TOAST NOTIFICATIONS ===
-        function showToast(message, type = 'success', duration = 4000) {
-            const container = document.getElementById('toast-container');
-            const colors = {
-                success: 'bg-emerald-500',
-                error: 'bg-red-500',
-                warning: 'bg-amber-500',
-                info: 'bg-blue-500'
-            };
-            
-            const toast = document.createElement('div');
-            toast.className = `${colors[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 slide-up`;
-            toast.innerHTML = `
-                <span class="flex-1 text-sm font-medium">${message}</span>
-                <button onclick="this.parentElement.remove()" class="text-white/80 hover:text-white">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            `;
-            
-            container.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(100%)';
-                setTimeout(() => toast.remove(), 300);
-            }, duration);
-        }
-        
-        // Exponer globalmente para compatibilidad
-        window.mostrarNotificacion = function(msg, type) {
-            showToast(msg, type === 'success' ? 'success' : (type === 'error' ? 'error' : 'warning'));
-        };
-        
-        // === TEMA ===
-        function toggleTheme() {
-            const html = document.documentElement;
-            const isDark = html.classList.contains('dark');
-            
-            if (isDark) {
-                html.classList.remove('dark');
-                localStorage.setItem('theme', 'light');
-            } else {
-                html.classList.add('dark');
-                localStorage.setItem('theme', 'dark');
-            }
-            
-            updateThemeIcons();
-        }
-        
-        function updateThemeIcons() {
-            const isDark = document.documentElement.classList.contains('dark');
-            document.getElementById('theme-icon-light')?.classList.toggle('hidden', isDark);
-            document.getElementById('theme-icon-dark')?.classList.toggle('hidden', !isDark);
-        }
-        
-        function initTheme() {
-            const saved = localStorage.getItem('theme');
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            
-            if (saved === 'dark' || (!saved && prefersDark)) {
-                document.documentElement.classList.add('dark');
-            }
-            
-            updateThemeIcons();
-        }
-        
-        // === MENÚ MÓVIL ===
-        function toggleMobileMenu() {
-            const menu = document.getElementById('mobile-menu');
-            menu?.classList.toggle('hidden');
-        }
-        
-        // === INIT ===
-        document.addEventListener('DOMContentLoaded', () => {
-            // Tema
-            initTheme();
-            document.getElementById('btn-theme-toggle')?.addEventListener('click', toggleTheme);
-            
-            // Dropdowns
-            setupDropdown('btn-notificaciones', 'notif-dropdown', 'notif-container');
-            setupDropdown('btn-user-menu', 'user-dropdown', 'user-menu-container');
-            
-            // Menú móvil
-            document.getElementById('btn-mobile-menu')?.addEventListener('click', toggleMobileMenu);
-            
-            // Logout
-            document.getElementById('btn-logout-trigger')?.addEventListener('click', () => openModal('modal-logout'));
-            
-            // ESC para cerrar modales
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    document.querySelectorAll('[id^="modal-"]').forEach(m => {
-                        if (!m.classList.contains('hidden')) closeModal(m.id);
-                    });
-                }
-            });
-        });
-    </script>
+    <!-- Módulo Core de UI (cargado desde archivo externo) -->
+    <script src="<?= BASE_URL ?>js/core/core.js?v=<?= time() ?>"></script>
+    
 </body>
 </html>

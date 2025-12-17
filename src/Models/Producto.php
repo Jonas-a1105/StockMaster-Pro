@@ -176,10 +176,24 @@ class Producto {
     /**
      * Actualiza solo el stock de un producto
      */
-    public function actualizarStock($userId, $id, $nuevoStock) {
+    public function actualizarStock($userId, $id, $cantidad, $tipo = 'Entrada') {
         try {
-            $stmt = $this->db->prepare("UPDATE productos SET stock = ? WHERE id = ? AND user_id = ?");
-            $stmt->execute([$nuevoStock, $id, $userId]);
+            // Validar entradas negativas just in case (aunque el controller lo maneja)
+            $cantidad = abs($cantidad);
+            
+            if ($tipo === 'Entrada' || $tipo === 'add') {
+                $operador = '+';
+            } else {
+                // Salida o subtract
+                $operador = '-';
+            }
+            
+            // Usar lógica relativa: stock = stock +/- cantidad
+            // GREATEST(0, ...) asegura que no baje de 0
+            $query = "UPDATE productos SET stock = GREATEST(0, stock $operador ?) WHERE id = ? AND user_id = ?";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$cantidad, $id, $userId]);
             return true;
         } catch (\PDOException $e) {
             error_log("Error updating stock: " . $e->getMessage());

@@ -5,22 +5,29 @@
  * Exportación de reportes a PDF y CSV
  */
 
-// Variable global para el reporte actual
-window.reporteActual = {
-    datos: [],
-    columnas: [],
-    titulo: ''
-};
+// Variable global para el reporte actual (solo inicializar si no existe)
+if (!window.reporteActual || !window.reporteActual.datos || window.reporteActual.datos.length === 0) {
+    window.reporteActual = {
+        datos: [],
+        columnas: [],
+        titulo: ''
+    };
+}
 
 /**
  * Exporta el reporte actual al formato especificado
  * @param {string} formato - 'pdf' o 'csv'
  */
 function exportarReporte(formato) {
-    const reporte = window.reporteActual;
+    let reporte = window.reporteActual;
+
+    // Si no hay datos en la variable global, intentar leer de la tabla HTML
+    if (!reporte || !reporte.datos || reporte.datos.length === 0) {
+        reporte = leerReporteDeTabla();
+    }
 
     if (!reporte || !reporte.datos || reporte.datos.length === 0) {
-        mostrarNotificacion('No hay datos en pantalla para exportar.', 'error');
+        mostrarNotificacion('No hay datos en pantalla para exportar. Genera un reporte primero.', 'error');
         return;
     }
 
@@ -32,12 +39,51 @@ function exportarReporte(formato) {
 }
 
 /**
+ * Lee los datos del reporte directamente de la tabla HTML (fallback)
+ */
+function leerReporteDeTabla() {
+    const tabla = document.querySelector('.lg\\:col-span-3 table');
+    if (!tabla) return null;
+
+    const titulo = document.querySelector('.lg\\:col-span-3 h3')?.textContent?.trim() || 'Reporte';
+    const columnas = [];
+    const datos = [];
+
+    // Leer columnas del thead
+    tabla.querySelectorAll('thead th').forEach(th => {
+        columnas.push(th.textContent.trim());
+    });
+
+    // Leer filas del tbody
+    tabla.querySelectorAll('tbody tr').forEach(tr => {
+        const fila = [];
+        tr.querySelectorAll('td').forEach(td => {
+            fila.push(td.textContent.trim());
+        });
+        if (fila.length > 0 && fila.some(c => c !== '')) {
+            datos.push(fila);
+        }
+    });
+
+    if (datos.length === 0) return null;
+
+    // Actualizar la variable global
+    window.reporteActual = { titulo, columnas, datos };
+    return window.reporteActual;
+}
+
+/**
  * Exporta a PDF
  * @param {Object} reporte - Datos del reporte
  */
 function exportarPDF(reporte) {
+    // Auto-configurar jsPDF si viene del UMD bundle
+    if (!window.jsPDF && window.jspdf) {
+        window.jsPDF = window.jspdf.jsPDF;
+    }
+
     if (!window.jsPDF) {
-        mostrarNotificacion('Error: Librería PDF no disponible.', 'error');
+        mostrarNotificacion('Error: Librería PDF no disponible. Recarga la página.', 'error');
         return;
     }
 

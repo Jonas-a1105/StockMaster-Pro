@@ -24,6 +24,11 @@ function abrirModal(modalId) {
         // Asegurar que el display sea flex para centrado (Tailwind 'hidden' usa display:none)
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+
+        // Disparar evento para que otros scripts puedan inicializar componentes dentro del modal
+        setTimeout(() => {
+            modal.dispatchEvent(new CustomEvent('modal:opened', { bubbles: true, detail: { modalId } }));
+        }, 50);
     }
 }
 

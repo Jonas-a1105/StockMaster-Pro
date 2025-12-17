@@ -30,10 +30,12 @@ class LoginController {
         $stmt->execute([$username]);
         $usuario = $stmt->fetch();
 
-        // Verificar contraseña
+            // Verificar contraseña
         if ($usuario && password_verify($password, $usuario['password'])) {
             
-            Session::init(); // Iniciar sesión
+            Session::init(); // Iniciar sesión (si no estaba iniciada)
+            session_regenerate_id(true); // <--- PARCHE DE SEGURIDAD: Previene fijación de sesión
+            
             
             // --- LÓGICA DE EQUIPOS (EMPLEADOS VS DUEÑOS) ---
             if (!empty($usuario['owner_id'])) {
@@ -123,6 +125,65 @@ class LoginController {
         require __DIR__ . '/../../views/login/bienvenida.php';
     }
     
+    /**
+     * RESETEO TÉCNICO (Soporte Challenge-Response)
+     */
+    public function verificarDesbloqueo() {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Método inválido']);
+            exit;
+        }
+
+        $challenge = $_POST['challenge'] ?? '';
+        $response  = $_POST['response'] ?? '';
+        $username  = $_POST['username'] ?? '';
+        // Secreto Maestro (Debe coincidir con la herramienta del soporte)
+        $masterSecret = "StockMaster_Secure_2025_Key"; 
+
+        if (empty($challenge) || empty($response) || empty($username)) {
+            echo json_encode(['success' => false, 'message' => 'Faltan datos']);
+            exit;
+        }
+
+        // 1. Verificar Firma Digital (SHA-256)
+        // La lógica debe ser EXACTAMENTE igual a la herramienta JS del soporte
+        // Algoritmo: Upper(Substr(SHA256(Challenge + Secret), 0, 6))
+        
+        $hash = hash('sha256', $challenge . $masterSecret);
+        $expectedResponse = strtoupper(substr($hash, 0, 6));
+
+        if ($response !== $expectedResponse) {
+            echo json_encode(['success' => false, 'message' => 'Código de autorización inválido']);
+            exit;
+        }
+
+        // 2. Si es válido, reseteamos al usuario
+        $db = Database::conectar();
+        
+        // Verificar si usuario existe
+        $stmt = $db->prepare("SELECT id FROM usuarios WHERE username = ?");
+        $stmt->execute([$username]);
+        $user = $stmt->fetch();
+
+        if (!$user) {
+            echo json_encode(['success' => false, 'message' => 'Usuario no encontrado']);
+            exit;
+        }
+
+        // 3. Resetear contraseña a 'admin123'
+        $newPass = password_hash('admin123', PASSWORD_DEFAULT);
+        $update = $db->prepare("UPDATE usuarios SET password = ? WHERE id = ?");
+        
+        if ($update->execute([$newPass, $user['id']])) {
+            echo json_encode(['success' => true, 'message' => 'Contraseña restablecida a: admin123']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Error de base de datos']);
+        }
+        exit;
+    }
+
     /**
      * Cierra la sesión del usuario
      */

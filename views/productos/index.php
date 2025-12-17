@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * INVENTARIO - Vista Enterprise
  * views/productos/index.php
@@ -12,6 +12,8 @@ $paginaActual = $paginaActual ?? 1;
 $totalPaginas = $totalPaginas ?? 1;
 $terminoBusqueda = $terminoBusqueda ?? '';
 ?>
+
+<!-- Header -->
 
 <!-- Header -->
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -33,49 +35,183 @@ $terminoBusqueda = $terminoBusqueda ?? '';
 </div>
 
 <!-- Toolbar -->
-<div class="flex flex-col lg:flex-row gap-4 mb-6">
-    <!-- Búsqueda -->
-    <div class="flex-1 relative">
-        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <?= Icons::get('search', 'w-5 h-5 text-slate-400') ?>
+<div class="flex flex-col lg:flex-row gap-4 mb-6 justify-between">
+    
+    <!-- Unified Left Group (Switch + Actions + Search) -->
+    <div class="flex-1 flex items-center gap-3">
+        <!-- Modo Selección Switch -->
+        <button id="toggle-selection-mode" onclick="toggleSelectionMode()" 
+                class="flex-shrink-0 flex items-center justify-center p-2 rounded-full text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
+                title="Activar Modo Selección">
+            <div class="w-9 h-5 rounded-full bg-slate-300 dark:bg-slate-500 transition-colors flex items-center px-[2px]" id="selection-switch-bg">
+                <div class="w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300" id="selection-switch-knob"></div>
+            </div>
+        </button>
+
+        <!-- Wrapper Animado para Acciones Masivas -->
+        <div id="bulk-actions-wrapper" class="flex-none hidden">
+            <div class="flex items-center gap-2 min-w-max">
+                <button onclick="toggleSelectAll()" id="btn-select-all"
+                        class="whitespace-nowrap px-3 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-sm">
+                    Todo
+                </button>
+                <button onclick="confirmarEliminacionMasiva()" id="btn-delete-bulk" disabled
+                        class="whitespace-nowrap flex items-center gap-2 px-3 py-2.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl font-medium hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+                    <?= Icons::get('trash', 'w-4 h-4') ?>
+                    <span>Eliminar (<span id="count-selected">0</span>)</span>
+                </button>
+            </div>
         </div>
-        <input type="text" 
-               id="busqueda-input" 
-               value="<?= htmlspecialchars($terminoBusqueda) ?>"
-               placeholder="Buscar por nombre, código o categoría..."
-               class="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-700 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all">
+
+        <!-- Búsqueda (Flexible) -->
+        <div class="flex-1 relative transition-all duration-300">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <?= Icons::get('search', 'w-5 h-5 text-slate-400') ?>
+            </div>
+            <input type="text" 
+                   id="busqueda-input" 
+                   value="<?= htmlspecialchars($terminoBusqueda) ?>"
+                   placeholder="Buscar..."
+                   class="w-full pl-12 pr-4 py-2.5 bg-slate-100 dark:bg-slate-700 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all">
+        </div>
     </div>
     
-    <!-- Acciones -->
-    <div class="flex gap-2">
+    <!-- Acciones Derecha -->
+    <div class="flex items-center gap-3">
         <!-- Selector Modo Vista -->
         <select id="currency-display-mode" 
+                data-setup-simple-select
                 class="px-3 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-xs sm:text-sm">
             <option value="mixed">Mixto ($ / Bs)</option>
             <option value="usd">Solo Dólares ($)</option>
             <option value="ves">Solo Bolívares (Bs)</option>
         </select>
 
-        <button onclick="exportarInventario('csv')" 
-                class="inline-flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors">
-            <?= Icons::get('download', 'w-4 h-4') ?>
-            <span class="hidden sm:inline">Exportar</span>
-        </button>
-        <button onclick="document.getElementById('input-importar').click()" 
-                class="inline-flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors">
-            <?= Icons::get('upload', 'w-4 h-4') ?>
-            <span class="hidden sm:inline">Importar</span>
-        </button>
-        <input type="file" id="input-importar" accept=".csv" class="hidden" onchange="importarInventario(this)">
+        <!-- Divisor Vertical -->
+        <div class="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+
+        <!-- Toggle Herramientas -->
+        <label class="flex items-center gap-2 cursor-pointer bg-white dark:bg-slate-700 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors" title="Mostrar herramientas avanzadas">
+            <input type="checkbox" id="toggle-tools" class="w-4 h-4 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500/30" onchange="toggleTools(this)">
+            <span class="text-xs font-medium text-slate-600 dark:text-slate-300 select-none">Herramientas</span>
+        </label>
+
+        <!-- Contenedor de Herramientas (Oculto por defecto) -->
+        <div id="tools-container" class="hidden flex gap-2 animate-fade-in-right">
+            <button onclick="exportarInventario('csv')" 
+                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 rounded-xl font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-sm">
+                <?= Icons::get('download', 'w-4 h-4') ?>
+                <span class="hidden sm:inline">CSV</span>
+            </button>
+
+            <button onclick="document.getElementById('input-importar').click()" 
+                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors shadow-sm">
+                <?= Icons::get('upload', 'w-4 h-4') ?>
+                <span class="hidden sm:inline">Importar</span>
+            </button>
+            <input type="file" id="input-importar" accept=".csv" class="hidden" onchange="importarInventario(this)">
+        </div>
     </div>
+
+    <script>
+        function toggleTools(checkbox) {
+            const container = document.getElementById('tools-container');
+            if (checkbox.checked) {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+    </script>
 </div>
 
 <!-- Tabla -->
+<style>
+    /* === ANIMACIÓN MODO SELECCIÓN === */
+    
+    .animate-fade-in-right {
+        animation: fadeInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    
+    @keyframes fadeInRight {
+        from { opacity: 0; transform: translateX(-10px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    
+    /* Default: Hide columns when not in selection mode */
+    #tabla-inventario:not(.selection-visible) .selection-col {
+        display: none !important;
+    }
+    
+    /* Base state: columns visible but collapsed */
+    #tabla-inventario.selection-visible .selection-col {
+        width: 0;
+        min-width: 0;
+        max-width: 0;
+        padding-left: 0;
+        padding-right: 0;
+        opacity: 0;
+        overflow: hidden;
+        transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                    max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                    opacity 0.3s ease-out,
+                    padding 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* Expanded state: columns fully visible */
+    #tabla-inventario.selection-expanded .selection-col {
+        width: 3.5rem !important;
+        min-width: 3.5rem;
+        max-width: 3.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        opacity: 1 !important;
+    }
+    
+    /* Bulk Actions Wrapper - Base collapsed state */
+    #bulk-actions-wrapper {
+        max-width: 0;
+        opacity: 0;
+        overflow: hidden;
+        padding-right: 0;
+        margin-right: 0;
+        pointer-events: none;
+        transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                    opacity 0.35s ease-out,
+                    padding 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                    margin 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* Bulk Actions Wrapper - Expanded state */
+    #bulk-actions-wrapper.expanded {
+        max-width: 280px;
+        opacity: 1;
+        padding-right: 12px;
+        margin-right: 8px;
+        pointer-events: auto;
+    }
+    
+    /* Force Checkbox Visibility (Bypassing Tailwind JIT) */
+    .product-checkbox:checked + .visual-checkbox {
+        background-color: #ef4444 !important; /* red-500 */
+        border-color: #ef4444 !important;
+    }
+    .product-checkbox:checked + .visual-checkbox .checkmark-icon {
+        opacity: 1 !important;
+        transform: scale(1) !important;
+    }
+</style>
 <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
     <table class="w-full text-sm" id="tabla-inventario">
         <thead class="bg-slate-50 dark:bg-slate-700/50">
             <tr>
-                <th class="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-300 w-[280px]">Producto</th>
+                <!-- Checkbox Header (Hidden by default) -->
+                <th class="selection-col w-0 opacity-0 overflow-hidden px-0 py-3 transition-all duration-300 ease-out border-b border-slate-200 dark:border-slate-700">
+                    <div class="w-10 flex justify-center">
+                        <!-- Header Checkbox (Optional, or just spacer) -->
+                    </div>
+                </th>
+                <th class="pl-4 pr-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-300 w-[280px]">Producto</th>
                 <th class="px-4 py-3 text-center font-semibold text-slate-600 dark:text-slate-300">Stock</th>
                 <th class="px-4 py-3 text-center font-semibold text-slate-600 dark:text-slate-300">IVA</th>
                 <th class="px-4 py-3 text-right font-semibold text-slate-600 dark:text-slate-300">P. Compra</th>
@@ -127,8 +263,26 @@ $terminoBusqueda = $terminoBusqueda ?? '';
                     data-ganancia-total-usd="<?= $gananciaTotal ?>"
                     data-valor-venta-total-usd="<?= $valorStock ?>">
                     
+                    <!-- Checkbox Cell (Hidden by default) -->
+                    <th class="selection-col w-0 opacity-0 overflow-hidden px-0 py-3 transition-all duration-300 ease-out border-b border-slate-100 dark:border-slate-700 group-hover:bg-indigo-50/30">
+                        <div class="w-10 flex justify-center">
+                            <label class="relative flex items-center justify-center cursor-pointer p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-600">
+                                <!-- Hidden Input -->
+                                <input type="checkbox" name="selected_products[]" value="<?= $p['id'] ?>" 
+                                       onchange="updateBulkDeleteState()"
+                                       class="peer sr-only product-checkbox">
+                                
+                                <!-- Visual Checkbox Ring -->
+                                <div class="visual-checkbox w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-300 dark:border-slate-500 bg-white dark:bg-transparent transition-all duration-200">
+                                    <!-- Checkmark Icon -->
+                                    <?= Icons::get('check', 'checkmark-icon w-3.5 h-3.5 text-white opacity-0 transition-all duration-200 transform scale-90') ?>
+                                </div>
+                            </label>
+                        </div>
+                    </th>
+
                     <!-- Producto -->
-                    <td class="px-4 py-3">
+                    <td class="pl-0 pr-4 py-3">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 bg-gradient-to-br <?= $iconStyle ?> rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
                                 <?= Icons::get($iconName, 'w-5 h-5') ?>
@@ -168,7 +322,7 @@ $terminoBusqueda = $terminoBusqueda ?? '';
                     <td class="px-4 py-3 text-right">
                         <div class="flex flex-col items-end currency-wrapper" data-usd="<?= $p['precioCompraUSD'] ?>">
                             <span class="price-main font-mono text-slate-600 dark:text-slate-300">$<?= number_format($p['precioCompraUSD'], 2) ?></span>
-                            <span class="price-sec block text-xs text-slate-400">Bs. --</span>
+                            <span class="price-sec block text-xs text-slate-400 precio-compra-ves">Bs. --</span>
                         </div>
                     </td>
                     
@@ -176,21 +330,24 @@ $terminoBusqueda = $terminoBusqueda ?? '';
                     <td class="px-4 py-3 text-right">
                         <div class="flex flex-col items-end currency-wrapper" data-usd="<?= $p['precioVentaUSD'] ?>">
                             <span class="price-main font-mono font-semibold text-slate-800 dark:text-white">$<?= number_format($p['precioVentaUSD'], 2) ?></span>
-                            <span class="price-sec block text-xs text-emerald-600 dark:text-emerald-400">Bs. --</span>
+                            <span class="price-sec block text-xs text-emerald-600 dark:text-emerald-400 precio-venta-ves">Bs. --</span>
                         </div>
                     </td>
                     
                     <!-- Ganancia -->
                     <td class="px-4 py-3 text-right">
-                        <span class="font-mono text-emerald-600 dark:text-emerald-400">+$<?= number_format($p['gananciaUnitariaUSD'], 2) ?></span>
-                        <span class="block text-xs text-slate-400"><?= $p['margen_ganancia'] ?? 30 ?>% margen</span>
+                        <div class="flex flex-col items-end currency-wrapper" data-usd="<?= $p['gananciaUnitariaUSD'] ?>" data-text-class="text-emerald-600 dark:text-emerald-400">
+                             <span class="price-main font-mono text-emerald-600 dark:text-emerald-400">+$<?= number_format($p['gananciaUnitariaUSD'], 2) ?></span>
+                             <span class="price-sec block text-xs text-slate-400 ganancia-ves">Bs. --</span>
+                        </div>
+                        <span class="block text-xs text-slate-400 mt-0.5"><?= $p['margen_ganancia'] ?? 30 ?>% margen</span>
                     </td>
                     
                     <!-- Valor Stock -->
                     <td class="px-4 py-3 text-right hidden xl:table-cell">
                         <div class="flex flex-col items-end currency-wrapper" data-usd="<?= $valorStock ?>">
                             <span class="price-main font-mono font-semibold text-slate-800 dark:text-white">$<?= number_format($valorStock, 2) ?></span>
-                            <span class="price-sec block text-xs text-slate-400">Bs. --</span>
+                            <span class="price-sec block text-xs text-slate-400 valor-venta-total-ves">Bs. --</span>
                         </div>
                     </td>
                     
@@ -226,7 +383,9 @@ $terminoBusqueda = $terminoBusqueda ?? '';
     <!-- Selector de Límite -->
     <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
         <span>Mostrar</span>
-        <select onchange="window.location.href='index.php?controlador=producto&accion=index&limite=' + this.value + '&busqueda=<?= urlencode($terminoBusqueda) ?>'"
+        <select id="limit-selector"
+                data-setup-simple-select
+                onchange="window.location.href='index.php?controlador=producto&accion=index&limite=' + this.value + '&busqueda=<?= urlencode($terminoBusqueda) ?>'"
                 class="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 py-1 px-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
             <?php 
             $opciones = $opcionesLimite ?? [3, 5, 7, 10, 25, 50, 100];
@@ -303,13 +462,16 @@ $terminoBusqueda = $terminoBusqueda ?? '';
 
 <!-- Modal Agregar Producto -->
 <div id="modal-agregar-producto" class="hidden fixed inset-0 z-[100]">
-    <div class="fixed inset-0 bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-agregar-producto')"></div>
-    <div class="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto">
+    <!-- Backdrop (Visual only) -->
+    <div class="fixed inset-0 bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-sm transition-opacity"></div>
+    
+    <!-- Wrapper (Clickable area) -->
+    <div class="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto" onclick="if(event.target === this) closeModal('modal-agregar-producto')">
         <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg my-8 relative fade-in">
             <!-- Header -->
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
                 <h3 class="text-lg font-semibold text-slate-800 dark:text-white">Nuevo Producto</h3>
-                <button onclick="closeModal('modal-agregar-producto')" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                <button id="cerrar-modal-agregar-prod" onclick="closeModal('modal-agregar-producto')" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                     <?= Icons::get('x', 'w-5 h-5') ?>
                 </button>
             </div>
@@ -331,19 +493,40 @@ $terminoBusqueda = $terminoBusqueda ?? '';
                     
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Categoría</label>
-                        <select name="categoria" required 
-                                class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                            <option value="">Seleccionar...</option>
-                            <?php foreach ($categorias as $cat): ?>
-                                <option value="<?= htmlspecialchars($cat) ?>"><?= htmlspecialchars($cat) ?></option>
-                            <?php endforeach; ?>
-                            <option value="Otros">Otros</option>
-                        </select>
+                        <div class="relative z-50 group" id="combobox-categoria-add">
+                            <!-- Hidden Native Select (for Form Submit) -->
+                            <select name="categoria" id="categoria-select-hidden" class="sr-only" required>
+                                <option value="">Seleccionar...</option>
+                                <?php foreach ($categorias as $cat): ?>
+                                    <option value="<?= htmlspecialchars($cat) ?>"><?= htmlspecialchars($cat) ?></option>
+                                <?php endforeach; ?>
+                                <option value="Otros">Otros</option>
+                            </select>
+
+                            <!-- Custom Display (Solo lectura, sin búsqueda) -->
+                            <div class="relative">
+                                <input type="text" id="categoria-input-visual" 
+                                       placeholder="Seleccionar categoría..." 
+                                       readonly
+                                       class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer">
+                                
+                                <!-- Icono Chevron -->
+                                <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-400">
+                                    <svg class="w-4 h-4 transition-transform duration-200" id="categoria-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                            </div>
+
+                            <!-- Dropdown List -->
+                            <ul id="categoria-list-add" style="z-index: 9999;"
+                                class="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl max-h-60 overflow-y-auto hidden divide-y divide-slate-100 dark:divide-slate-700">
+                                <!-- Options injected by JS -->
+                            </ul>
+                        </div>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Proveedor</label>
-                        <div class="relative group" id="combobox-proveedor-add">
+                        <div class="relative z-50 group" id="combobox-proveedor-add">
                             <!-- Hidden Native Select (for Form Submit) -->
                             <select name="proveedor_id" id="proveedor-select-hidden" class="sr-only">
                                 <option value="0">Sin proveedor</option>
@@ -357,9 +540,7 @@ $terminoBusqueda = $terminoBusqueda ?? '';
                                 <input type="text" id="proveedor-input-visual" 
                                        placeholder="Seleccionar proveedor..." 
                                        readonly
-                                       class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer caret-emerald-500"
-                                       onfocus="this.removeAttribute('readonly');" 
-                                       onblur="setTimeout(() => this.setAttribute('readonly', true), 200);">
+                                       class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer caret-emerald-500">
                                 
                                 <!-- Icono Chevron -->
                                 <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-400">
@@ -373,8 +554,8 @@ $terminoBusqueda = $terminoBusqueda ?? '';
                             </div>
 
                             <!-- Dropdown List -->
-                            <ul id="proveedor-list-add" 
-                                class="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl max-h-60 overflow-y-auto hidden z-50 divide-y divide-slate-100 dark:divide-slate-700">
+                            <ul id="proveedor-list-add" style="z-index: 9999;"
+                                class="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl max-h-60 overflow-y-auto hidden divide-y divide-slate-100 dark:divide-slate-700">
                                 <!-- Options injected by JS -->
                             </ul>
                         </div>
@@ -484,7 +665,7 @@ $terminoBusqueda = $terminoBusqueda ?? '';
                     
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Proveedor</label>
-                        <div class="relative group" id="combobox-proveedor-edit">
+                        <div class="relative z-50 group" id="combobox-proveedor-edit">
                             <!-- Hidden Native Select -->
                             <select name="proveedor_id" id="editar-proveedor-hidden" class="sr-only">
                                 <option value="0">Sin proveedor</option>
@@ -498,9 +679,7 @@ $terminoBusqueda = $terminoBusqueda ?? '';
                                 <input type="text" id="editar-proveedor-visual" 
                                        placeholder="Seleccionar proveedor..." 
                                        readonly
-                                       class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer caret-emerald-500"
-                                       onfocus="this.removeAttribute('readonly');" 
-                                       onblur="setTimeout(() => this.setAttribute('readonly', true), 200);">
+                                       class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer caret-emerald-500">
                                 
                                 <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-400">
                                     <svg class="w-4 h-4 transition-transform duration-200" id="proveedor-chevron-edit" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -512,8 +691,8 @@ $terminoBusqueda = $terminoBusqueda ?? '';
                             </div>
 
                             <!-- Dropdown List -->
-                            <ul id="proveedor-list-edit" 
-                                class="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl max-h-60 overflow-y-auto hidden z-50 divide-y divide-slate-100 dark:divide-slate-700">
+                            <ul id="proveedor-list-edit" style="z-index: 9999;"
+                                class="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl max-h-60 overflow-y-auto hidden divide-y divide-slate-100 dark:divide-slate-700">
                             </ul>
                         </div>
                     </div>
@@ -585,529 +764,79 @@ $terminoBusqueda = $terminoBusqueda ?? '';
     </div>
 </div>
 
+<!-- Modal Confirmar Eliminar (Individual) -->
+<div id="modal-eliminar-producto" class="hidden fixed inset-0 z-[110]">
+    <div class="fixed inset-0 bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-eliminar-producto')"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm relative fade-in p-6 text-center">
+            <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                <?= Icons::get('trash', 'w-8 h-8') ?>
+            </div>
+            
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-2">¿Eliminar producto?</h3>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mb-6">Esta acción no se puede deshacer. El producto será eliminado del inventario permanentemente.</p>
+            
+            <div class="flex gap-3">
+                <button onclick="closeModal('modal-eliminar-producto')" 
+                        class="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    Cancelar
+                </button>
+                <button id="btn-confirmar-borrar-producto"
+                        class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30">
+                    Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Masivo -->
+<div id="modal-eliminar-masivo" class="hidden fixed inset-0 z-[110]">
+    <div class="fixed inset-0 bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-sm transition-opacity" onclick="closeModal('modal-eliminar-masivo')"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md relative fade-in p-6">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <?= Icons::get('trash', 'w-8 h-8') ?>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-2">Eliminar <span id="count-eliminar-masivo">0</span> productos</h3>
+                <p class="text-slate-500 dark:text-slate-400 text-sm">
+                    Para confirmar, escribe <span class="font-bold text-slate-700 dark:text-slate-200">ELIMINAR</span> en el campo de abajo.
+                </p>
+            </div>
+            
+            <input type="text" id="input-verificacion-eliminar" placeholder="Escribe ELIMINAR"
+                   class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl text-center font-bold text-slate-800 dark:text-white mb-6 focus:outline-none focus:ring-2 focus:ring-red-500/30 uppercase transition-all">
+            
+            <div class="flex gap-3">
+                <button onclick="closeModal('modal-eliminar-masivo')" 
+                        class="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    Cancelar
+                </button>
+                <button id="btn-confirmar-eliminar-masivo" disabled onclick="procesarEliminacionMasiva()"
+                        class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30 opacity-50 cursor-not-allowed">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-// === CONFIGURACIÓN GLOBAL ===
+// =========================================================================
+// DATOS DESDE PHP (requeridos por el módulo productos.js)
+// =========================================================================
 window.tasaCambio = <?= $tasaCambio ?>;
 window.currencyMode = localStorage.getItem('currencyMode') || 'mixed';
 window.listaProveedores = <?= json_encode(array_map(function($p){ return ['id'=>$p['id'], 'nombre'=>$p['nombre']]; }, $proveedores)) ?>;
-
-// Restaurar modo guardado
-document.getElementById('currency-display-mode').value = window.currencyMode;
-
-// === BÚSQUEDA CON DEBOUNCE ===
-window.searchTimer = window.searchTimer || null;
-window.searchInput = document.getElementById('busqueda-input');
-// Use var or global assignment via destructuring if needed, but since it's const, 
-// we must change it to var or window.prop if the script re-runs in the same scope. 
-// However, 'replaceChild' creates a new script context in some environments but not all. 
-// Safest is window prop.
-// Inject icons from PHP for JS usage
 window.svgIcons = <?= json_encode(\App\Helpers\Icons::getAll()) ?>;
-
-window.searchInput = document.getElementById('busqueda-input');
-
-window.searchInput?.addEventListener('input', (e) => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-        const term = e.target.value;
-        buscarProductos(term);
-    }, 300);
-});
-
-async function buscarProductos(term) {
-    try {
-        const res = await fetch(`index.php?controlador=producto&accion=apiBuscar&term=${encodeURIComponent(term)}`);
-        const productos = await res.json();
-        renderizarTabla(productos);
-    } catch (e) {
-        console.error('Error búsqueda:', e);
-    }
-}
-
-function renderizarTabla(productos) {
-    const tbody = document.getElementById('tabla-body');
-    if (!tbody) return;
-    
-    if (productos.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="8" class="px-4 py-12 text-center">
-                    <p class="text-slate-500">No se encontraron productos</p>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    tbody.innerHTML = productos.map(p => {
-        const valorStock = p.precioVentaUSD * p.stock;
-        
-        // Helper Functions for Dynamic Icons (Mirrors PHP ProductIcons)
-        const getIconData = (name, category) => {
-            const mappings = {
-                coffee: ['cafe', 'café', 'coffee', 'espresso', 'late', 'capuchino'],
-                cookie: ['galleta', 'cookie', 'dulce', 'caramelo', 'chocolate', 'snack', 'confite'],
-                bread: ['pan', 'harina', 'sandwich', 'torta', 'pastel', 'trigo', 'masa'],
-                drink: ['refresco', 'jugo', 'bebida', 'agua', 'gaseosa', 'coca', 'pepsi', 'liquido'],
-                droplet: ['aceite', 'salsa', 'vinagre', 'lubricante'],
-                meat: ['carne', 'pollo', 'res', 'cerdo', 'embutido', 'jamon'],
-                fish: ['pescado', 'atun', 'sardina', 'marisco'],
-                carrot: ['fruta', 'verdura', 'vegetal', 'zanahoria', 'tomate', 'cebolla', 'papa'],
-                tag: ['ropa', 'camisa', 'pantalon', 'zapato', 'vestido'],
-                device: ['telefono', 'celular', 'laptop', 'computadora', 'mouse', 'teclado', 'cable', 'cargador'],
-                tool: ['herramienta', 'martillo', 'clavo', 'tornillo', 'taladro'],
-                medicine: ['medicina', 'pastilla', 'jarabe', 'farmacia', 'salud'],
-                box: ['caja', 'paquete', 'bulto']
-            };
-
-            const colors = {
-                coffee: 'from-amber-100 to-amber-200 text-amber-600',
-                cookie: 'from-orange-100 to-orange-200 text-orange-600',
-                bread: 'from-yellow-100 to-yellow-200 text-yellow-600',
-                drink: 'from-blue-100 to-blue-200 text-blue-600',
-                droplet: 'from-cyan-100 to-cyan-200 text-cyan-600',
-                meat: 'from-red-100 to-red-200 text-red-600',
-                fish: 'from-sky-100 to-sky-200 text-sky-600',
-                carrot: 'from-green-100 to-green-200 text-green-600',
-                tag: 'from-purple-100 to-purple-200 text-purple-600',
-                device: 'from-indigo-100 to-indigo-200 text-indigo-600',
-                medicine: 'from-rose-100 to-rose-200 text-rose-600',
-                box: 'from-slate-100 to-slate-200 text-slate-500'
-            };
-
-            const search = (name + ' ' + (category || '')).toLowerCase();
-            let iconKey = 'box';
-
-            for (const [key, keywords] of Object.entries(mappings)) {
-                if (keywords.some(k => search.includes(k))) {
-                    iconKey = key;
-                    break;
-                }
-            }
-            // Fallback by category
-            if (iconKey === 'box') {
-                if ((category||'').toLowerCase().includes('alimento')) iconKey = 'food';
-                if ((category||'').toLowerCase().includes('bebida')) iconKey = 'drink';
-            }
-
-            return {
-                icon: iconKey,
-                style: colors[iconKey] || colors['box']
-            };
-        };
-
-        const iconData = getIconData(p.nombre, p.categoria);
-        // Get SVG string and inject classes
-        let svgHtml = window.svgIcons[iconData.icon] || window.svgIcons['box'];
-        // Replace current class (assumed empty or not having specific size) with needed size
-        // The PHP version uses str_replace('<svg ', '<svg class="..." '). 
-        // We can do proper replacement or just wrap it. 
-        // The Icons.php returns clean SVG usually within <svg ...>.
-        // Let's attempt simple string injection or just use innerHTML injection if SVG string is clean.
-        // We need to add 'w-5 h-5' class.
-        svgHtml = svgHtml.replace('<svg ', '<svg class="w-5 h-5" ');
-
-        const wrapPrice = (val, mainClass, secClass = 'text-slate-400') => `
-            <div class="flex flex-col items-end currency-wrapper" data-usd="${val}">
-                <span class="price-main font-mono ${mainClass}">$${parseFloat(val).toFixed(2)}</span>
-                <span class="price-sec block text-xs ${secClass}">Bs. --</span>
-            </div>
-        `;
-
-        return `
-            <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                <td class="px-4 py-3">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-gradient-to-br ${iconData.style} rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-                            ${svgHtml}
-                        </div>
-                        <div class="min-w-0 flex-1 max-w-[25ch]">
-                            <p class="font-medium text-slate-800 dark:text-white truncate" title="${escapeHTML(p.nombre)}">${escapeHTML(p.nombre)}</p>
-                            <div class="flex items-center gap-2 mt-0.5">
-                                ${p.codigo_barras ? `<span class="text-xs text-slate-400 font-mono">${escapeHTML(p.codigo_barras)}</span>` : ''}
-                                <span class="text-xs text-slate-400 truncate">${escapeHTML(p.categoria || 'Sin categoría')}</span>
-                            </div>
-                        </div>
-                    </div>
-                </td>
-                <td class="px-4 py-3 text-center">
-                     <span class="font-semibold ${p.stock == 0 ? 'text-red-600 dark:text-red-400' : (p.stock <= 10 ? 'text-amber-600 dark:text-amber-400' : '')}">${p.stock}</span>
-                     ${p.stock == 0 ? '<span class="ml-1 px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-medium rounded">Agotado</span>' : (p.stock <= 10 ? '<span class="ml-1 px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs font-medium rounded">Bajo</span>' : '')}
-                </td>
-                
-                <td class="px-4 py-3 text-center">
-                    ${p.tiene_iva ? `<span class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-medium rounded-lg">${parseInt(p.iva_porcentaje)}%</span>` : '<span class="text-slate-400 text-xs">—</span>'}
-                </td>
-                
-                <td class="px-4 py-3 text-right">
-                    ${wrapPrice(p.precioCompraUSD, 'text-slate-600 dark:text-slate-300')}
-                </td>
-                
-                <td class="px-4 py-3 text-right">
-                    ${wrapPrice(p.precioVentaUSD, 'font-semibold text-slate-800 dark:text-white', 'text-emerald-600 dark:text-emerald-400')}
-                </td>
-                
-                <td class="px-4 py-3 text-right">
-                    <span class="font-mono text-emerald-600 dark:text-emerald-400">+$${parseFloat(p.gananciaUnitariaUSD).toFixed(2)}</span>
-                    <span class="block text-xs text-slate-400">${p.margen_ganancia || 30}% margen</span>
-                </td>
-                
-                <td class="px-4 py-3 text-right hidden xl:table-cell">
-                    ${wrapPrice(valorStock, 'font-semibold text-slate-800 dark:text-white')}
-                </td>
-                
-                <td class="px-4 py-3 text-center">
-                    <div class="flex items-center justify-center gap-1">
-                        <button onclick="editarProducto(${p.id})" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Editar">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                        </button>
-                        <form action="index.php?controlador=producto&accion=eliminar" method="POST" class="inline form-eliminar" onsubmit="confirmarEliminar(event, this)">
-                            <input type="hidden" name="id" value="${p.id}">
-                            <button type="submit" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Eliminar">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join('');
-
-    // Actualizar conversiones
-    if (typeof actualizarPreciosDOM === 'function') {
-        actualizarPreciosDOM();
-    }
-}
-
-// === EDITAR PRODUCTO ===
-async function editarProducto(id) {
-    try {
-        const res = await fetch(`index.php?controlador=producto&accion=apiObtener&id=${id}`);
-        const p = await res.json();
-        
-        if (p.error) throw new Error(p.error);
-        
-        document.getElementById('editar-id').value = p.id;
-        document.getElementById('editar-nombre').value = p.nombre;
-        document.getElementById('editar-codigo-barras').value = p.codigo_barras || '';
-        document.getElementById('editar-codigo-barras').value = p.codigo_barras || '';
-        
-        // Custom Combobox Setter
-        const comboEdit = document.getElementById('combobox-proveedor-edit');
-        if (comboEdit && typeof comboEdit.setComboboxValue === 'function') {
-            comboEdit.setComboboxValue(p.proveedor_id || 0);
-        } else {
-             // Fallback for native select if JS failed
-            document.getElementById('editar-proveedor-hidden').value = p.proveedor_id || 0;
-        }
-
-        document.getElementById('editar-stock').value = p.stock || 0;
-        document.getElementById('editar-stock').value = p.stock || 0;
-        document.getElementById('editar-precio-base').value = p.precio_base || p.precioCompraUSD;
-        document.getElementById('editar-margen').value = p.margen_ganancia || 30;
-        
-        const tieneIva = document.getElementById('editar-tiene-iva');
-        const ivaGrupo = document.getElementById('editar-iva-grupo');
-        tieneIva.checked = p.tiene_iva == 1;
-        ivaGrupo.classList.toggle('hidden', !tieneIva.checked);
-        document.getElementById('editar-iva-porcentaje').value = p.iva_porcentaje || 16;
-        
-        // Preview
-        document.getElementById('preview-precio-compra').textContent = `$${parseFloat(p.precioCompraUSD).toFixed(2)}`;
-        document.getElementById('preview-precio-venta').textContent = `$${parseFloat(p.precioVentaUSD).toFixed(2)}`;
-        document.getElementById('preview-ganancia').textContent = `$${parseFloat(p.gananciaUnitariaUSD).toFixed(2)}`;
-        
-        calcularPreviewEditar(); // Recalcular con datos frescos
-        
-        openModal('modal-editar-producto');
-    } catch (e) {
-        showToast(e.message, 'error');
-    }
-}
-
-// === IVA TOGGLE ===
-document.getElementById('add-tiene-iva')?.addEventListener('change', (e) => {
-    document.getElementById('add-iva-grupo').classList.toggle('hidden', !e.target.checked);
-    calcularPreviewAgregar();
-});
-
-document.getElementById('editar-tiene-iva')?.addEventListener('change', (e) => {
-    document.getElementById('editar-iva-grupo').classList.toggle('hidden', !e.target.checked);
-});
-
-// === CALCULAR PREVIEW ===
-function calcularPreviewAgregar() {
-    const base = parseFloat(document.getElementById('add-precio-base')?.value) || 0;
-    const margen = parseFloat(document.getElementById('add-margen')?.value) || 0;
-    const tieneIva = document.getElementById('add-tiene-iva')?.checked;
-    const ivaPct = parseFloat(document.getElementById('add-iva-porcentaje')?.value) || 0;
-    
-    const precioCompra = tieneIva ? base * (1 + ivaPct/100) : base;
-    const precioVenta = precioCompra * (1 + margen/100);
-    const ganancia = precioVenta - precioCompra;
-    
-    document.getElementById('add-preview-compra').textContent = `$${precioCompra.toFixed(2)}`;
-    document.getElementById('add-preview-venta').textContent = `$${precioVenta.toFixed(2)}`;
-    document.getElementById('add-preview-ganancia').textContent = `$${ganancia.toFixed(2)}`;
-}
-
-document.getElementById('add-precio-base')?.addEventListener('input', calcularPreviewAgregar);
-document.getElementById('add-margen')?.addEventListener('input', calcularPreviewAgregar);
-document.getElementById('add-iva-porcentaje')?.addEventListener('input', calcularPreviewAgregar);
-
-// === CALCULAR PREVIEW EDITAR ===
-function calcularPreviewEditar() {
-    const base = parseFloat(document.getElementById('editar-precio-base')?.value) || 0;
-    const margen = parseFloat(document.getElementById('editar-margen')?.value) || 0;
-    const tieneIva = document.getElementById('editar-tiene-iva')?.checked;
-    const ivaPct = parseFloat(document.getElementById('editar-iva-porcentaje')?.value) || 0;
-    
-    const precioCompra = tieneIva ? base * (1 + ivaPct/100) : base;
-    const precioVenta = precioCompra * (1 + margen/100);
-    const ganancia = precioVenta - precioCompra;
-    
-    document.getElementById('preview-precio-compra').textContent = `$${precioCompra.toFixed(2)}`;
-    document.getElementById('preview-precio-venta').textContent = `$${precioVenta.toFixed(2)}`;
-    document.getElementById('preview-ganancia').textContent = `$${ganancia.toFixed(2)}`;
-}
-
-document.getElementById('editar-precio-base')?.addEventListener('input', calcularPreviewEditar);
-document.getElementById('editar-margen')?.addEventListener('input', calcularPreviewEditar);
-document.getElementById('editar-iva-porcentaje')?.addEventListener('input', calcularPreviewEditar);
-document.getElementById('editar-tiene-iva')?.addEventListener('change', calcularPreviewEditar);
-
-// === EXPORTAR/IMPORTAR ===
-function exportarInventario(formato) {
-    window.location.href = `index.php?controlador=producto&accion=exportar&formato=${formato}`;
-}
-
-function importarInventario(input) {
-    if (!input.files[0]) return;
-    
-    const formData = new FormData();
-    formData.append('archivo', input.files[0]);
-    
-    fetch('index.php?controlador=producto&accion=importar', {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Productos importados correctamente', 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            showToast(data.message || 'Error al importar', 'error');
-        }
-    })
-    .catch(e => showToast('Error al importar', 'error'));
-    
-    input.value = '';
-}
-
-// === ELIMINAR CON CONFIRMACIÓN ===
-document.querySelectorAll('.form-eliminar').forEach(form => {
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        window.formParaEliminar = form;
-        openModal('modal-confirmar-eliminar');
-    });
-});
-
-document.getElementById('btn-confirmar-eliminar')?.addEventListener('click', () => {
-    if (window.formParaEliminar) {
-        window.formParaEliminar.submit();
-    }
-});
-
-// === COMBOBOX PROVEEDORES (Add & Edit) ===
-function setupCombobox(wrapperId, hiddenSelectId, inputVisualId, listId, btnLimpiarId) {
-    const wrapper = document.getElementById(wrapperId);
-    if (!wrapper) return;
-
-    const hiddenSelect = document.getElementById(hiddenSelectId);
-    const inputVisual = document.getElementById(inputVisualId);
-    const list = document.getElementById(listId);
-    const btnLimpiar = document.getElementById(btnLimpiarId);
-    
-    // 1. Initial Render
-    renderList('');
-    
-    // 2. Event Listeners
-    inputVisual.addEventListener('click', () => {
-        list.classList.toggle('hidden');
-        if (!list.classList.contains('hidden')) {
-            renderList('');
-            inputVisual.focus();
-        }
-    });
-
-    inputVisual.addEventListener('input', (e) => {
-        const term = e.target.value;
-        list.classList.remove('hidden');
-        renderList(term);
-        
-        // Show clear button if text exists
-        btnLimpiar.classList.toggle('hidden', term === '');
-    });
-
-    // Close on click outside
-    document.addEventListener('click', (e) => {
-        if (!wrapper.contains(e.target)) {
-            list.classList.add('hidden');
-        }
-    });
-
-    // Clear Button
-    btnLimpiar.addEventListener('click', (e) => {
-        e.stopPropagation();
-        inputVisual.value = '';
-        hiddenSelect.value = '0';
-        btnLimpiar.classList.add('hidden');
-        renderList('');
-        list.classList.remove('hidden');
-        inputVisual.focus();
-    });
-
-    function renderList(term) {
-        list.innerHTML = '';
-        const lowerTerm = term.toLowerCase();
-        
-        // Always include 'Sin proveedor' if matching or term empty
-        if ('sin proveedor'.includes(lowerTerm)) {
-             addItem({id: '0', nombre: 'Sin proveedor'});
-        }
-
-        const matches = window.listaProveedores.filter(p => p.nombre.toLowerCase().includes(lowerTerm));
-        
-        if (matches.length === 0 && lowerTerm !== '' && !'sin proveedor'.includes(lowerTerm)) {
-            list.innerHTML += `<li class="px-4 py-3 text-sm text-slate-500 text-center">No encontrado</li>`;
-        } else {
-            matches.forEach(p => addItem(p));
-        }
-    }
-
-    function addItem(p) {
-        const li = document.createElement('li');
-        li.className = 'px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-700 cursor-pointer transition-colors flex items-center justify-between group';
-        if (hiddenSelect.value == p.id) {
-            li.classList.add('bg-emerald-50', 'dark:bg-emerald-900/20', 'text-emerald-700', 'dark:text-emerald-400');
-        }
-        
-        li.innerHTML = `<span>${p.nombre}</span>`;
-        if (hiddenSelect.value == p.id) {
-             li.innerHTML += `<svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
-        }
-
-        li.onclick = () => {
-            selectItem(p);
-        };
-        list.appendChild(li);
-    }
-
-    function selectItem(p) {
-        hiddenSelect.value = p.id;
-        inputVisual.value = p.nombre;
-        list.classList.add('hidden');
-        if(p.id !== '0') btnLimpiar.classList.remove('hidden');
-    }
-    
-    // API Publica para setear valor externamente (ej: al editar)
-    wrapper.setComboboxValue = function(id) {
-        hiddenSelect.value = id;
-        const p = window.listaProveedores.find(x => x.id == id);
-        if (p) {
-            inputVisual.value = p.nombre;
-            btnLimpiar.classList.remove('hidden');
-        } else {
-            inputVisual.value = 'Sin proveedor';
-            btnLimpiar.classList.add('hidden');
-            if (id == 0) hiddenSelect.value = 0;
-        }
-    };
-}
-
-// Init
-setupCombobox('combobox-proveedor-add', 'proveedor-select-hidden', 'proveedor-input-visual', 'proveedor-list-add', 'btn-limpiar-prov-add');
-setupCombobox('combobox-proveedor-edit', 'editar-proveedor-hidden', 'editar-proveedor-visual', 'proveedor-list-edit', 'btn-limpiar-prov-edit');
-
-
-// === LÓGICA DE MONEDA ===
-// === LÓGICA DE MONEDA ===
-// Eliminado const conflicto
-
-
-// === LOGICA DE PRECIOS Y SELECTOR ===
-function actualizarPreciosDOM() {
-    const tasa = window.tasaCambio || 30;
-    const mode = window.currencyMode || 'mixed';
-    
-    document.querySelectorAll('.currency-wrapper').forEach(el => {
-        const usdValue = parseFloat(el.dataset.usd || 0);
-        const vesValue = usdValue * tasa;
-        
-        const mainSpan = el.querySelector('.price-main');
-        const secSpan = el.querySelector('.price-sec');
-        
-        if (!mainSpan || !secSpan) return;
-
-        // Reset: Asegurar que ambos son visibles y tienen clases base correctas antes de switch
-        mainSpan.classList.remove('hidden', 'text-sm');
-        secSpan.classList.remove('hidden', 'text-lg', 'font-semibold');
-        
-        // Formatters
-        const fmtUSD = (val) => `$${val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-        const fmtVES = (val) => `Bs. ${val.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-        
-        if (mode === 'mixed') {
-            // Main: USD, Sec: VES
-            mainSpan.textContent = fmtUSD(usdValue);
-            secSpan.textContent = fmtVES(vesValue);
-            secSpan.classList.add('text-xs');
-        } else if (mode === 'usd') {
-            // Main: USD
-            mainSpan.textContent = fmtUSD(usdValue);
-            // Sec: Hidden COMPLETAMENTE
-            secSpan.textContent = ''; 
-            secSpan.classList.add('hidden');
-        } else if (mode === 'ves') {
-            // Main: VES (Swap)
-            mainSpan.textContent = fmtVES(vesValue);
-            // Sec: Hidden
-            secSpan.textContent = '';
-            secSpan.classList.add('hidden');
-        }
-    });
-}
-
-// Event Listener para el selector
-// Event Listener para el selector
-if (document.getElementById('currency-display-mode')) {
-    document.getElementById('currency-display-mode').addEventListener('change', (e) => {
-        window.currencyMode = e.target.value;
-        localStorage.setItem('currencyMode', window.currencyMode);
-        actualizarPreciosDOM();
-    });
-}
-
-// Escuchar cambios de tasa desde el Navbar (exchange-rate.js)
-window.addEventListener('tasa-cambio-actualizada', (e) => {
-    if (e.detail && e.detail.tasa) {
-        window.tasaCambio = parseFloat(e.detail.tasa);
-        actualizarPreciosDOM();
-    }
-});
-
-// Inicializar precios al cargar
-document.addEventListener('DOMContentLoaded', () => {
-    actualizarPreciosDOM();
-});
-
-// Redefinición de renderizarTabla eliminada ya que se integró arriba
-
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-}
+window.listaCategorias = [
+    <?php foreach ($categorias as $cat): ?>
+    { id: '<?= htmlspecialchars($cat, ENT_QUOTES) ?>', nombre: '<?= htmlspecialchars($cat, ENT_QUOTES) ?>' },
+    <?php endforeach; ?>
+    { id: 'Otros', nombre: 'Otros' }
+];
 </script>
+
+<!-- Módulo de Productos (cargado desde archivo externo) -->
+<script src="<?= BASE_URL ?>js/pages/productos.js?v=<?= time() ?>"></script>

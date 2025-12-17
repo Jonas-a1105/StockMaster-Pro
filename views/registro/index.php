@@ -1,14 +1,24 @@
-<?php use App\Helpers\Icons; ?>
+<?php 
+use App\Helpers\Icons; 
+use App\Core\Session;
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crear Cuenta | Nexus Enterprise</title>
+    <title>Crear Cuenta | StockMaster Pro</title>
     <link rel="stylesheet" href="css/main.css?v=<?= time() ?>">
     <link href="css/animations.css" rel="stylesheet">
 </head>
 <body class="min-h-screen bg-[#eef2f6] flex flex-col items-center justify-center p-4">
+
+    <!-- Flash Messages (Hidden Data) -->
+    <?php if ($msg = Session::getFlash('success')): ?>
+        <div id="flash-data" data-type="success" data-message="<?= htmlspecialchars($msg) ?>"></div>
+    <?php elseif ($msg = Session::getFlash('error')): ?>
+        <div id="flash-data" data-type="error" data-message="<?= htmlspecialchars($msg) ?>"></div>
+    <?php endif; ?>
 
     <!-- Loading Screen (Hidden) -->
     <div id="loading-screen" class="fixed inset-0 z-50 bg-[#eef2f6] flex flex-col items-center justify-center p-4 hidden">
@@ -164,25 +174,10 @@
     </div>
 
     <script src="<?= BASE_URL ?>js/core/utils.js?v=<?= time() ?>"></script>
-    <script>
-        document.getElementById('register-form').addEventListener('submit', function(e) {
-            const pass = document.getElementById('password').value;
-            const confirm = document.getElementById('password_confirm').value;
-            
-            if (pass !== confirm) {
-                e.preventDefault();
-                alert('Las contraseñas no coinciden'); // Replace with Toast if utils available
-                return;
-            }
+    <script src="<?= BASE_URL ?>js/core/notifications.js?v=<?= time() ?>"></script>
+    <script src="<?= BASE_URL ?>js/app.js?v=<?= time() ?>"></script>
 
-            // Loader UI
-            const btn = document.getElementById('btn-submit');
-            document.getElementById('btn-text').textContent = 'Creando cuenta...';
-            document.getElementById('btn-icon').classList.add('hidden');
-            document.getElementById('btn-loader').classList.remove('hidden');
-            btn.disabled = true;
-            document.getElementById('loading-screen').classList.remove('hidden');
-        });
-    </script>
+    <!-- Módulo de Autenticación (cargado desde archivo externo) -->
+    <script src="<?= BASE_URL ?>js/pages/auth.js?v=<?= time() ?>"></script>
 </body>
 </html>

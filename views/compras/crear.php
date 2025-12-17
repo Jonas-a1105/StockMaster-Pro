@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * COMPRAS - Crear Nueva Compra Enterprise
  * views/compras/crear.php
@@ -42,14 +42,42 @@ $proveedores = $proveedores ?? [];
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Proveedor</label>
-                    <select id="compra-proveedor" class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30">
-                        <option value="">Seleccionar...</option>
-                        <?php foreach($proveedores as $p): ?>
-                            <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['nombre']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <!-- Wrapper con Z-Index alto para que el dropdown flote sobre todo -->
+                    <div class="relative z-50" id="combobox-proveedor-compra">
+                        <!-- Hidden Real Input -->
+                        <input type="hidden" name="proveedor_id" id="compra-proveedor" value="">
+                        
+                        <!-- Visual Input -->
+                        <div class="relative">
+                            <input type="text" 
+                                   id="proveedor-input-visual"
+                                   class="w-full pl-4 pr-10 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
+                                   placeholder="Seleccionar proveedor..."
+                                   autocomplete="off">
+                                   
+                            <!-- Icons -->
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                            
+                            <!-- Clear Button -->
+                            <button type="button" id="btn-limpiar-prov-compra" class="absolute inset-y-0 right-8 flex items-center pr-1 text-slate-400 hover:text-red-500 hidden z-10">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Dropdown List (Z-Index 50) -->
+                        <ul id="proveedor-list-compra" style="z-index: 9999;"
+                            class="absolute w-full mt-1 bg-white dark:bg-slate-700 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 max-h-60 overflow-y-auto hidden">
+                            <!-- JS populated -->
+                        </ul>
+                    </div>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Nro. Factura</label>
                     <input type="text" id="compra-factura" placeholder="Ej: A-123" 
@@ -64,7 +92,7 @@ $proveedores = $proveedores ?? [];
                 
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Condición</label>
-                    <select id="compra-condicion" class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                    <select id="compra-condicion" data-setup-simple-select class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30">
                         <option value="Contado">💵 Contado (Pagada)</option>
                         <option value="Credito">📅 Crédito (Pendiente)</option>
                     </select>
@@ -95,7 +123,7 @@ $proveedores = $proveedores ?? [];
                        placeholder="Buscar producto por nombre o código..."
                        autocomplete="off"
                        class="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-600 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                <div id="compra-resultados" class="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-700 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 max-h-60 overflow-y-auto z-50 hidden"></div>
+                <div id="compra-resultados" style="z-index: 9999;" class="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-700 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 max-h-60 overflow-y-auto hidden"></div>
             </div>
             
             <!-- Tabla Items -->
@@ -170,230 +198,12 @@ $proveedores = $proveedores ?? [];
     </div>
 </div>
 
-<script>
-window.carritoCompra = [];
+</div>
 
-// === BÚSQUEDA PRODUCTOS ===
-let searchTimer;
-const buscador = document.getElementById('compra-buscador');
-const resultados = document.getElementById('compra-resultados');
-
-buscador?.addEventListener('input', (e) => {
-    clearTimeout(searchTimer);
-    const term = e.target.value;
-    
-    if (term.length < 2) {
-        resultados.classList.add('hidden');
-        return;
-    }
-    
-    searchTimer = setTimeout(async () => {
-        try {
-            const res = await fetch(`index.php?controlador=compra&accion=buscarProductos&term=${encodeURIComponent(term)}`);
-            const productos = await res.json();
-            
-            if (productos.length === 0) {
-                resultados.innerHTML = '<div class="p-4 text-center text-slate-400">No se encontraron productos</div>';
-            } else {
-                resultados.innerHTML = productos.map(p => `
-                    <div class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-600 cursor-pointer transition-colors" onclick='agregarProductoCompra(${JSON.stringify(p).replace(/'/g, "\\'")})'>
-                        <div class="flex-1">
-                            <p class="font-medium text-slate-800 dark:text-white">${escapeHTML(p.nombre)}</p>
-                            <p class="text-xs text-slate-400">Costo: $${parseFloat(p.precioCompraUSD || 0).toFixed(2)}</p>
-                        </div>
-                    </div>
-                `).join('');
-            }
-            
-            resultados.classList.remove('hidden');
-        } catch (e) {
-            console.error('Error búsqueda:', e);
-        }
-    }, 300);
-});
-
-// Cerrar resultados al hacer clic fuera
-document.addEventListener('click', (e) => {
-    if (!buscador?.contains(e.target) && !resultados?.contains(e.target)) {
-        resultados?.classList.add('hidden');
-    }
-});
-
-function agregarProductoCompra(producto) {
-    const existente = window.carritoCompra.find(i => i.id === producto.id);
-    if (existente) {
-        existente.cantidad++;
-    } else {
-        window.carritoCompra.push({
-            id: producto.id,
-            nombre: producto.nombre,
-            costo: parseFloat(producto.precioCompraUSD || 0),
-            cantidad: 1
-        });
-    }
-    renderizarTablaCompra();
-    resultados.classList.add('hidden');
-    buscador.value = '';
-    showToast(`${producto.nombre} agregado`, 'success');
-}
-
-function renderizarTablaCompra() {
-    const tbody = document.getElementById('cuerpo-compra');
-    const isEmpty = window.carritoCompra.length === 0;
-    
-    if (isEmpty) {
-        tbody.innerHTML = `
-            <tr id="row-empty">
-                <td colspan="5" class="px-4 py-12 text-center text-slate-400">
-                    Busca productos para agregar
-                </td>
-            </tr>
-        `;
-        actualizarResumen(0, 0, 0);
-        return;
-    }
-    
-    let total = 0;
-    let totalItems = 0;
-    
-    tbody.innerHTML = window.carritoCompra.map((item, index) => {
-        const subtotal = item.costo * item.cantidad;
-        total += subtotal;
-        totalItems += item.cantidad;
-        
-        return `
-            <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-600/30">
-                <td class="px-4 py-3 font-medium text-slate-800 dark:text-white">${escapeHTML(item.nombre)}</td>
-                <td class="px-4 py-3 text-center">
-                    <input type="number" 
-                           class="w-16 px-2 py-1.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-lg text-center font-semibold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                           value="${item.cantidad}" 
-                           min="1"
-                           onchange="actualizarCantidadCompra(${index}, this.value)">
-                </td>
-                <td class="px-4 py-3 text-right">
-                    <input type="number" 
-                           class="w-20 px-2 py-1.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-lg text-right font-mono text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                           value="${item.costo.toFixed(2)}" 
-                           step="0.01"
-                           min="0"
-                           onchange="actualizarCostoCompra(${index}, this.value)">
-                </td>
-                <td class="px-4 py-3 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">$${subtotal.toFixed(2)}</td>
-                <td class="px-4 py-3 text-center">
-                    <button onclick="eliminarItemCompra(${index})" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-    
-    document.getElementById('compra-total-display').textContent = `$${total.toFixed(2)}`;
-    actualizarResumen(window.carritoCompra.length, totalItems, total);
-}
-
-function actualizarResumen(items, cantidad, total) {
-    document.getElementById('resumen-items').textContent = items;
-    document.getElementById('resumen-cantidad').textContent = cantidad;
-    document.getElementById('resumen-total').textContent = `$${total.toFixed(2)}`;
-}
-
-window.actualizarCantidadCompra = function(index, value) {
-    const cantidad = parseInt(value);
-    if (cantidad > 0) {
-        window.carritoCompra[index].cantidad = cantidad;
-        renderizarTablaCompra();
-    }
-};
-
-window.actualizarCostoCompra = function(index, value) {
-    const costo = parseFloat(value);
-    if (costo >= 0) {
-        window.carritoCompra[index].costo = costo;
-        renderizarTablaCompra();
-    }
-};
-
-window.eliminarItemCompra = function(index) {
-    window.carritoCompra.splice(index, 1);
-    renderizarTablaCompra();
-};
-
-// === CONDICIÓN ===
-document.getElementById('compra-condicion')?.addEventListener('change', (e) => {
-    document.getElementById('div-vencimiento').classList.toggle('hidden', e.target.value !== 'Credito');
-});
-
-// === GUARDAR ===
-window.guardarCompra = async function() {
-    const btn = document.getElementById('btn-guardar-compra');
-    
-    try {
-        const provId = document.getElementById('compra-proveedor')?.value;
-        if (!provId) {
-            showToast('Selecciona un proveedor', 'error');
-            return;
-        }
-        
-        if (window.carritoCompra.length === 0) {
-            showToast('Agrega productos a la compra', 'error');
-            return;
-        }
-        
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Guardando...';
-        }
-        
-        const condicion = document.getElementById('compra-condicion')?.value || 'Contado';
-        const fecha = document.getElementById('compra-fecha')?.value || '';
-        
-        const payload = {
-            proveedor_id: provId,
-            nro_factura: document.getElementById('compra-factura')?.value || '',
-            fecha_emision: fecha,
-            fecha_vencimiento: condicion === 'Credito' 
-                ? (document.getElementById('compra-vencimiento')?.value || fecha) 
-                : fecha,
-            estado: condicion === 'Credito' ? 'Pendiente' : 'Pagada',
-            carrito: window.carritoCompra
-        };
-        
-        const res = await fetch('index.php?controlador=compra&accion=guardar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-            showToast('Compra registrada con éxito', 'success');
-            setTimeout(() => window.location.href = 'index.php?controlador=compra&accion=index', 1000);
-        } else {
-            throw new Error(data.message || 'Error al guardar');
-        }
-    } catch (e) {
-        showToast(e.message, 'error');
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<?= Icons::get("check", "w-5 h-5") ?> Guardar Compra';
-        }
-    }
-};
-
-// === INIT ===
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btn-guardar-compra')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        window.guardarCompra();
-    });
-    renderizarTablaCompra();
-});
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-}
+<!-- Data Injection safe escape (OUTSIDE JS) -->
+<script id="proveedores-data" type="application/json">
+    <?= json_encode($proveedores, JSON_HEX_TAG | JSON_HEX_AMP) ?>
 </script>
+
+<!-- Módulo de Crear Compras (cargado desde archivo externo) -->
+<script src="<?= BASE_URL ?>js/pages/compras-crear.js?v=<?= time() ?>"></script>
