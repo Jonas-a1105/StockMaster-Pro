@@ -20,24 +20,27 @@ $baseUrl = rtrim($scriptDir, '/\\') . '/';
 define('BASE_URL', $baseUrl);
 
 // Detectar Versión de la App (desde package.json)
-// Detectar Versión de la App (desde package.json)
-$packageJsonPath = __DIR__ . '/../package.json';
-$appVersion = '1.0.8'; // Valor por defecto
+// Detectar Versión de la App
+// 1. Intentar desde Variable de Entorno (Inyectada por Electron)
+$appVersion = getenv('APP_VERSION_ELECTRON');
 
-// Intentar rutas alternativas si la principal falla (para producción vs desarrollo)
-$posiblesRutas = [
-    __DIR__ . '/../package.json',           // Desarrollo / Estándar
-    __DIR__ . '/../../package.json',        // Alternativa profundidad
-    dirname(__DIR__) . '/package.json'      // Otra forma de llegar al root
-];
+// 2. Si no existe (Entorno Web o Dev sin Electron), buscar en package.json
+if (!$appVersion) {
+    $appVersion = '1.0.8'; // Valor por defecto
+    $posiblesRutas = [
+        __DIR__ . '/../package.json',           // Desarrollo / Estándar
+        __DIR__ . '/../../package.json',        // Alternativa profundidad
+        dirname(__DIR__) . '/package.json'      // Otra forma de llegar al root
+    ];
 
-foreach ($posiblesRutas as $ruta) {
-    if (file_exists($ruta)) {
-        $packageContent = file_get_contents($ruta);
-        $packageData = json_decode($packageContent, true);
-        if ($packageData && isset($packageData['version'])) {
-            $appVersion = $packageData['version'];
-            break; // Encontramos la versión, salir del loop
+    foreach ($posiblesRutas as $ruta) {
+        if (file_exists($ruta)) {
+            $packageContent = file_get_contents($ruta);
+            $packageData = json_decode($packageContent, true);
+            if ($packageData && isset($packageData['version'])) {
+                $appVersion = $packageData['version'];
+                break;
+            }
         }
     }
 }

@@ -123,6 +123,7 @@ function startPhpServer() {
     const env = Object.create(process.env);
     env.DB_CONNECTION = 'sqlite';
     env.DB_DATABASE = safeDbPath; // <--- USAR LA RUTA SEGURA
+    env.APP_VERSION_ELECTRON = app.getVersion(); // <--- INYECTAR VERSION OFICIAL
     // Forzar modo producción si está empaquetado para evitar errores de visualización de debug
     if (app.isPackaged) {
         env.APP_ENV = 'production';
