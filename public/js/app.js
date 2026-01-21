@@ -29,38 +29,47 @@ if (window.jspdf) {
 window.carritoPOS = window.carritoPOS || [];
 window.carritoCompra = window.carritoCompra || [];
 
-// =========================================================================
-// HELPER GLOBAL: escapeHTML
-// =========================================================================
-window.escapeHTML = function (str) {
-    if (str === null || str === undefined) return '';
-    return String(str).replace(/[&<>"']/g, function (m) {
-        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
-    });
-};
+// NOTE: escapeHTML is provided by utils.js - no need for duplicate definition
 
 // =========================================================================
 // INICIALIZACIÓN POR PÁGINA
 // =========================================================================
 function inicializarPaginaActual() {
+    console.log('[App] Inicializando lógica de página específica...');
+
     // POS (Punto de Venta)
-    if (document.getElementById('pos-buscador') && typeof window.inicializarPOS === 'function') {
-        window.inicializarPOS();
+    if (document.getElementById('pos-container') || document.getElementById('pos-buscador')) {
+        if (typeof window.inicializarPOS === 'function') {
+            window.inicializarPOS();
+        }
     }
 
-    // Compras
-    if (document.getElementById('compra-buscador') && typeof window.inicializarCompras === 'function') {
-        window.inicializarCompras();
+    // Compras (Crear)
+    if (document.getElementById('compra-buscador') || document.getElementById('cuerpo-compra')) {
+        if (typeof window.inicializarCompras === 'function') {
+            window.inicializarCompras();
+        }
     }
 
     // Proveedores
-    if (document.getElementById('tabla-proveedores') && typeof window.inicializarProveedores === 'function') {
-        window.inicializarProveedores();
+    if (document.getElementById('tabla-proveedores') || document.getElementById('form-editar-proveedor')) {
+        if (typeof window.inicializarProveedores === 'function') {
+            window.inicializarProveedores();
+        }
     }
 
-    // Productos (modales de agregar/editar)
-    if (document.getElementById('modal-agregar-producto') && typeof window.inicializarModalesProducto === 'function') {
-        window.inicializarModalesProducto();
+    // Productos (Inventario)
+    if (document.getElementById('tabla-inventario') || document.getElementById('busqueda-input')) {
+        if (typeof window.inicializarProductos === 'function') {
+            window.inicializarProductos();
+        }
+    }
+
+    // Clientes
+    if (document.getElementById('tabla-clientes')) {
+        if (typeof window.inicializarClientes === 'function') {
+            window.inicializarClientes();
+        }
     }
 }
 
@@ -97,13 +106,25 @@ document.addEventListener('DOMContentLoaded', () => {
         ExchangeRate.init();
         ExchangeRate.configurarManual();
 
-        // Re-aplicar tasa al navegar con Turbo
+        // Re-aplicar tasa y re-init página al navegar con Turbo
         window.addEventListener('app:page-loaded', () => {
+            console.log('[TurboNav] app:page-loaded recibido');
+
             if (ExchangeRate.tasa > 0) ExchangeRate.reapply();
 
             // Re-cargar stats del footer
             if (typeof initFooterStats === 'function') {
                 initFooterStats();
+            }
+
+            // RE-INICIALIZAR LÓGICA DE PÁGINA ESPECÍFICA
+            inicializarPaginaActual();
+        });
+
+        // Suscribirse a cambios de tasa para actualizar UI global
+        Store.subscribe('tasa', (nuevaTasa) => {
+            if (typeof window.actualizarPreciosVES === 'function') {
+                window.actualizarPreciosVES(nuevaTasa);
             }
         });
     }

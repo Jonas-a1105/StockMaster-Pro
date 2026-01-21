@@ -28,6 +28,7 @@ use App\Helpers\Icons;
     <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
         
         <form action="index.php?controlador=ticket&accion=guardar" method="POST" class="space-y-6">
+            <?= \App\Helpers\Security::csrfField() ?>
             
             <!-- Asunto -->
             <div>

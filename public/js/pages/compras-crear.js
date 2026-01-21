@@ -162,8 +162,7 @@ function initBusquedaProductos() {
 
         searchTimer = setTimeout(async () => {
             try {
-                const res = await fetch(`index.php?controlador=compra&accion=buscarProductos&term=${encodeURIComponent(term)}`);
-                const productos = await res.json();
+                const productos = await API.get(`index.php?controlador=compra&accion=buscarProductos&term=${encodeURIComponent(term)}`);
 
                 resultados.innerHTML = '';
 
@@ -194,11 +193,18 @@ function initBusquedaProductos() {
     });
 
     // Cerrar resultados al hacer clic fuera
-    document.addEventListener('click', (e) => {
+    const outsideClickListener = (e) => {
         if (!buscador.contains(e.target) && !resultados.contains(e.target)) {
             resultados.classList.add('hidden');
         }
-    });
+    };
+
+    document.addEventListener('click', outsideClickListener);
+
+    // Limpieza al descargar la página (TurboNav)
+    window.addEventListener('app:page-unloaded', () => {
+        document.removeEventListener('click', outsideClickListener);
+    }, { once: true });
 }
 
 // =========================================================================
@@ -252,13 +258,7 @@ async function guardarCompra() {
             carrito: window.carritoCompra
         };
 
-        const res = await fetch('index.php?controlador=compra&accion=guardar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await res.json();
+        const data = await API.post('index.php?controlador=compra&accion=guardar', payload);
 
         if (data.success) {
             showToast('Compra registrada con éxito', 'success');
@@ -268,6 +268,7 @@ async function guardarCompra() {
         }
     } catch (e) {
         showToast(e.message, 'error');
+    } finally {
         if (btn) {
             btn.disabled = false;
             btn.innerHTML = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Guardar Compra';
@@ -348,10 +349,7 @@ function initCompra() {
 // =========================================================================
 // HELPER FUNCTIONS
 // =========================================================================
-function escapeHTML(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
-}
+// escapeHTML is provided globally by utils.js - no local definition needed
 
 // showToast se usa directamente desde window.showToast (core.js)
 // NO definir localmente para evitar recursión infinita
@@ -367,15 +365,9 @@ window.ComprasCrear = {
 };
 
 // Funciones globales para onclick en HTML
+window.inicializarCompras = initCompra;
 window.agregarProductoCompra = agregarProductoCompra;
 window.actualizarCantidadCompra = actualizarCantidadCompra;
 window.actualizarCostoCompra = actualizarCostoCompra;
 window.eliminarItemCompra = eliminarItemCompra;
 window.guardarCompra = guardarCompra;
-
-// Inicializar cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCompra);
-} else {
-    initCompra();
-}

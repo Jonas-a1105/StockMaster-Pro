@@ -5,6 +5,9 @@
  * Mantiene la funcionalidad original (sync de valor y eventos change).
  */
 
+// Variables de estado global para el módulo
+let modalObserver = null;
+
 window.setupSimpleSelect = function (target, config = {}) {
     const originalSelect = typeof target === 'string' ? document.getElementById(target) : target;
     if (!originalSelect) return;
@@ -257,7 +260,12 @@ const isElementVisible = (el) => {
 
 // Observador para detectar cuando modales se abren (pierden clase 'hidden')
 const setupModalObserver = () => {
-    const observer = new MutationObserver((mutations) => {
+    // Si ya existe uno, lo desconectamos para evitar duplicados
+    if (modalObserver) {
+        modalObserver.disconnect();
+    }
+
+    modalObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
                 const target = mutation.target;
@@ -274,19 +282,25 @@ const setupModalObserver = () => {
 
     // Observar todos los modales existentes
     document.querySelectorAll('[id^="modal-"]').forEach(modal => {
-        observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+        modalObserver.observe(modal, { attributes: true, attributeFilter: ['class'] });
     });
 };
 
 // Limpieza global de dropdowns abiertos (útil para navegación SPA/Turbo)
 const cleanupSimpleSelects = () => {
-    // Buscar todos lo selects abiertos y cerrarlos forzosamente
+    // 1. Cerrar todos lo selects abiertos
     document.querySelectorAll('.simple-select-open').forEach(wrapper => {
         if (wrapper.simpleSelectClose) wrapper.simpleSelectClose();
     });
-    // Eliminar cualquier lista huérfana en body
-    const orphans = document.body.querySelectorAll('ul.fixed.z-\\[150\\]');
-    orphans.forEach(ul => ul.remove());
+
+    // 2. Desconectar observador de modales
+    if (modalObserver) {
+        modalObserver.disconnect();
+        modalObserver = null;
+    }
+
+    // 3. Eliminar cualquier lista huérfana en body (usando una clase más específica)
+    document.body.querySelectorAll('ul.fixed[style*="z-index: 99999"]').forEach(ul => ul.remove());
 };
 
 // Auto-inicializar en carga inicial y navegación TurboNav

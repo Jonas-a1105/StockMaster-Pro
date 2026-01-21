@@ -1,87 +1,90 @@
 <?php
 namespace App\Models;
 
+use App\Core\BaseModel;
 use App\Core\Database;
+use App\Core\QueryBuilder;
+use App\Domain\Enums\TicketStatus;
 use \PDO;
 
-class TicketModel {
-    
-    private $db;
+class TicketModel extends BaseModel {
+    protected $table = 'tickets';
+    protected $fillable = ['user_id', 'subject', 'priority', 'status'];
+    protected $timestamps = true;
 
     public function __construct() {
-        $this->db = Database::conectar();
+        parent::__construct();
     }
 
     // --- Funciones para el Usuario ---
     public function crearTicket($userId, $subject, $priority, $firstMessage) {
         try {
             $this->db->beginTransaction();
-            $queryTicket = "INSERT INTO tickets (user_id, subject, priority) VALUES (?, ?, ?)";
-            $stmtTicket = $this->db->prepare($queryTicket);
-            $stmtTicket->execute([$userId, $subject, $priority]);
+            $ticketId = $this->create([
+                'user_id' => $userId,
+                'subject' => $subject,
+                'priority' => $priority
+            ]);
             
-            $ticketId = $this->db->lastInsertId();
             $this->agregarRespuesta($ticketId, $userId, $firstMessage);
 
             $this->db->commit();
             return $ticketId;
         } catch (\Exception $e) {
-            $this->db->rollBack();
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             return false;
         }
     }
 
     public function obtenerTicketsPorUsuario($userId) {
-        $query = "SELECT * FROM tickets WHERE user_id = ? ORDER BY updated_at DESC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$userId]);
-        return $stmt->fetchAll();
+        return $this->query()
+            ->where('user_id', $userId)
+            ->orderBy('updated_at', 'DESC')
+            ->get();
     }
 
     public function obtenerTicketPorId($userId, $ticketId) {
-        $query = "SELECT * FROM tickets WHERE id = ? AND user_id = ?";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$ticketId, $userId]);
-        return $stmt->fetch();
+        return $this->query()
+            ->where('id', $ticketId)
+            ->where('user_id', $userId)
+            ->first();
     }
 
     public function obtenerRespuestas($ticketId) {
-        $query = "SELECT r.*, u.email 
-                  FROM ticket_replies r
-                  JOIN usuarios u ON r.user_id = u.id
-                  WHERE r.ticket_id = ? ORDER BY r.created_at ASC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$ticketId]);
-        return $stmt->fetchAll();
+        return QueryBuilder::table('ticket_replies')
+            ->select(['ticket_replies.*'])
+            ->selectRaw('usuarios.email')
+            ->join('usuarios', 'ticket_replies.user_id', '=', 'usuarios.id')
+            ->where('ticket_replies.ticket_id', $ticketId)
+            ->orderBy('ticket_replies.created_at', 'ASC')
+            ->get();
     }
 
     public function agregarRespuesta($ticketId, $userId, $message) {
-        $query = "INSERT INTO ticket_replies (ticket_id, user_id, message) VALUES (?, ?, ?)";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([$ticketId, $userId, $message]);
+        return QueryBuilder::table('ticket_replies')->insert([
+            'ticket_id' => $ticketId,
+            'user_id' => $userId,
+            'message' => $message
+        ]);
     }
     
     public function cambiarEstado($ticketId, $status) {
-         $query = "UPDATE tickets SET status = ? WHERE id = ?";
-         $stmt = $this->db->prepare($query);
-         return $stmt->execute([$status, $ticketId]);
+        return $this->query()->where('id', $ticketId)->update(['status' => $status]) > 0;
     }
 
     // --- Funciones para el Administrador ---
     public function obtenerTodosLosTickets() {
-        $query = "SELECT t.*, u.email 
-                  FROM tickets t
-                  JOIN usuarios u ON t.user_id = u.id
-                  ORDER BY t.updated_at DESC";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll();
+        return $this->query()
+            ->select(['tickets.*'])
+            ->selectRaw('usuarios.email')
+            ->join('usuarios', 'tickets.user_id', '=', 'usuarios.id')
+            ->orderBy('tickets.updated_at', 'DESC')
+            ->get();
     }
 
     public function obtenerTicketPorIdAdmin($ticketId) {
-        $query = "SELECT * FROM tickets WHERE id = ?";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$ticketId]);
-        return $stmt->fetch();
+        return $this->query()->where('id', $ticketId)->first();
     }
 }

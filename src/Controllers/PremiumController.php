@@ -1,22 +1,17 @@
 <?php
 namespace App\Controllers;
-
-// ¡Ya no se usa Stripe!
-
-class PremiumController {
-
+ 
+use App\Core\BaseController;
+use App\Core\Session;
+ 
+class PremiumController extends BaseController {
+ 
     /**
      * Muestra la página de "Volverse Premium" con el modal de contacto
      */
     public function index() {
-        $this->render('premium/index', [
-            'email' => $_SESSION['user_email'] ?? 'usuario'
+        return $this->response->view('premium/index', [
+            'email' => Session::get('user_email', 'usuario')
         ]);
-    }
-
-    private function render($vista, $data = []) {
-        extract($data);
-        $vistaContenido = __DIR__ . '/../../views/' . $vista . '.php';
-        require __DIR__ . '/../../views/layouts/main.php';
     }
 }

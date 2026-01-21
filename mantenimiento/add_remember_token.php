@@ -1,6 +1,6 @@
 <?php
 // add_remember_token_column.php
-require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\Database;
 

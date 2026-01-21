@@ -15,7 +15,7 @@ class Database {
         if (self::$conn === null) {
             
             // Configuration
-            $driver = getenv('DB_CONNECTION') ?: 'mysql'; // switchable: mysql | sqlite
+            $driver = trim(getenv('DB_CONNECTION') ?: 'mysql'); // switchable: mysql | sqlite
             
             try {
                 if ($driver === 'sqlite') {
@@ -34,10 +34,10 @@ class Database {
                     self::$conn = new PDO($dsn);
                 } else {
                     // MySQL / MariaDB (Default XAMPP)
-                    $host = getenv('DB_HOST') ?: '127.0.0.1';
-                    $db_name = getenv('DB_NAME') ?: 'inventario_oop';
-                    $username = getenv('DB_USER') ?: 'root';
-                    $password = getenv('DB_PASS') ?: '';
+                    $host = trim(getenv('DB_HOST') ?: '127.0.0.1');
+                    $db_name = trim(getenv('DB_DATABASE') ?: 'inventario_oop');
+                    $username = trim(getenv('DB_USER') ?: 'root');
+                    $password = trim(getenv('DB_PASS') ?: '');
                     
                     $dsn = 'mysql:host=' . $host . ';dbname=' . $db_name . ';charset=utf8mb4';
                     self::$conn = new PDO($dsn, $username, $password);

@@ -122,16 +122,15 @@ async function inicializarTasa() {
  * Aplica la tasa a los elementos del DOM
  */
 function aplicarTasa(tasa) {
-    tasaCambioBS = tasa;
-    actualizarPreciosVES(tasa);
+    if (!tasa || isNaN(tasa)) return;
 
-    // Notificar al sistema
-    window.dispatchEvent(new CustomEvent('tasa-cambio-actualizada', { detail: { tasa } }));
-
-    // Actualizar POS si existe
-    if (typeof window.actualizarTotalesPOS === 'function') {
-        window.actualizarTotalesPOS();
+    // Actualizar Store reactivo (esto disparará eventos)
+    if (window.Store) {
+        window.Store.tasa = parseFloat(tasa);
     }
+
+    tasaCambioBS = parseFloat(tasa);
+    actualizarPreciosVES(tasa);
 }
 
 /**
@@ -242,20 +241,10 @@ async function guardarTasaManual(tasa) {
 
     try {
         // 2. Guardar en Backend
-        const res = await fetch('index.php?controlador=config&accion=guardarTasa', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tasa: tasa })
-        });
-        const data = await res.json();
+        const data = await Endpoints.guardarTasa(tasa);
 
-        if (data.success) {
-            localStorage.setItem('manualRate', tasa);
-            mostrarNotificacion('Tasa actualizada correctamente', 'success');
-        } else {
-            console.error('[ExchangeRate] Error en servidor:', data.error);
-            mostrarNotificacion('Error al guardar tasa en servidor', 'error');
-        }
+        localStorage.setItem('manualRate', tasa);
+        mostrarNotificacion('Tasa actualizada correctamente', 'success');
     } catch (e) {
         console.error(e);
         // Aún así mantenemos el cambio visual porque es probable que sea error de red temporal

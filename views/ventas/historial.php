@@ -168,153 +168,87 @@ $buildUrl = function($page) use ($filtros) {
     </form>
 </div>
 
-<!-- Tabla de Ventas -->
-<div class="bg-white dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-600 overflow-hidden shadow-sm">
-    <?php if (empty($ventas)): ?>
-        <div class="p-12 text-center">
-            <?= Icons::get('search', 'w-16 h-16 mx-auto text-slate-200 dark:text-slate-600 mb-4') ?>
-            <p class="text-slate-500 dark:text-slate-400 text-lg font-medium">No se encontraron ventas</p>
-            <p class="text-slate-400 dark:text-slate-500 text-sm mt-1">Intenta ajustar los filtros de búsqueda</p>
-        </div>
-    <?php else: ?>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left">
-                <thead class="bg-slate-50 dark:bg-slate-600/50 border-b border-slate-100 dark:border-slate-600">
-                    <tr>
-                        <th class="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs">ID</th>
-                        <th class="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs">Fecha</th>
-                        <th class="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs">Cliente</th>
-                        <th class="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs text-right">Total USD</th>
-                        <th class="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs text-right">Total VES</th>
-                        <th class="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs text-center">Estado</th>
-                        <th class="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs text-center">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 dark:divide-slate-600">
-                    <?php foreach ($ventas as $v): 
-                        $status = $v['estado_pago'] ?? 'Pagada';
-                        $isPaid = $status === 'Pagada';
-                    ?>
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-600/30 transition-colors">
-                        <td class="px-6 py-4 font-mono text-slate-500 dark:text-slate-400">#<?= str_pad($v['id'], 5, '0', STR_PAD_LEFT) ?></td>
-                        <td class="px-6 py-4 text-slate-600 dark:text-slate-300">
-                            <?= (new DateTime($v['created_at']))->format('d/m/Y h:i A') ?>
-                        </td>
-                        <td class="px-6 py-4">
-                            <?php if (!empty($v['cliente_nombre'])): ?>
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-xs font-bold">
-                                        <?= strtoupper(substr($v['cliente_nombre'], 0, 1)) ?>
-                                    </div>
-                                    <div>
-                                        <p class="font-medium text-slate-800 dark:text-white"><?= htmlspecialchars($v['cliente_nombre']) ?></p>
-                                        <?php if (!empty($v['numero_documento'])): ?>
-                                            <p class="text-xs text-slate-400"><?= htmlspecialchars($v['numero_documento']) ?></p>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            <?php else: ?>
-                                <span class="italic text-slate-400">Cliente General</span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="px-6 py-4 text-right font-bold text-slate-700 dark:text-slate-200">
-                            $<?= number_format($v['total_usd'], 2) ?>
-                        </td>
-                        <td class="px-6 py-4 text-right font-medium text-slate-500 dark:text-slate-400">
-                            Bs <?= number_format($v['total_ves'], 2) ?>
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium <?= $isPaid ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' ?>">
-                                <span class="w-1.5 h-1.5 rounded-full <?= $isPaid ? 'bg-emerald-500' : 'bg-red-500' ?>"></span>
-                                <?= $status ?>
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <div class="flex justify-center gap-2">
-                                <a href="index.php?controlador=venta&accion=recibo&id=<?= $v['id'] ?>" target="_blank" class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg transition-colors" title="Ver Recibo">
-                                    <?= Icons::get('printer', 'w-4 h-4') ?>
-                                </a>
-                                <?php if (!$isPaid): ?>
-                                    <a href="index.php?controlador=venta&accion=pagarVenta&id=<?= $v['id'] ?>&t=<?= time() ?>" 
-                                       onclick="return confirm('¿Confirmar pago de esta venta?')"
-                                       class="p-2 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors" title="Marcar como Pagada">
-                                        <?= Icons::get('check', 'w-4 h-4') ?>
-                                    </a>
-                                <?php endif; ?>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Paginación y Selector -->
-        <?php if ($totalPaginas > 1 || !empty($ventas)): ?>
-        <div class="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 dark:border-slate-600 gap-4">
-            
-            <!-- Selector Límite -->
-            <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                <span>Mostrar</span>
-                <select onchange="window.location.href='<?= $buildUrl(1) ?>&limite=' + this.value"
-                        class="bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg py-1 px-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
-                    <?php 
-                    $opciones = $opcionesLimite ?? [3, 5, 7, 10, 25, 50, 100];
-                    $actual = $porPagina ?? 20;
-                    foreach ($opciones as $op): 
-                    ?>
-                        <option value="<?= $op ?>" <?= $actual == $op ? 'selected' : '' ?>><?= $op ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <span>por pág</span> <!-- <span class="hidden sm:inline"> | Total: <?= $totalRegistros ?></span> -->
-            </div>
-
-            <!-- Paginación Numerada -->
-            <?php if ($totalPaginas > 1): ?>
-            <div class="flex items-center gap-1">
-                <?php 
-                $rango = 2; 
-                $inicio = max(1, $paginaActual - $rango);
-                $fin = min($totalPaginas, $paginaActual + $rango);
-                ?>
-
-                <!-- Prev -->
-                <a href="<?= $buildUrl(max(1, $paginaActual - 1)) ?>&limite=<?= $actual ?>" 
-                   class="p-2 rounded-lg border border-slate-200 dark:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors <?= $paginaActual <= 1 ? 'pointer-events-none opacity-50' : '' ?>">
-                    <?= Icons::get('chevron-left', 'w-4 h-4 text-slate-600 dark:text-slate-300') ?>
-                </a>
-
-                <!-- Primero -->
-                <?php if ($inicio > 1): ?>
-                    <a href="<?= $buildUrl(1) ?>&limite=<?= $actual ?>" class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-500 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-medium">1</a>
-                    <?php if ($inicio > 2): ?><span class="px-2 text-slate-400">...</span><?php endif; ?>
-                <?php endif; ?>
-
-                <!-- Loop -->
-                <?php for ($i = $inicio; $i <= $fin; $i++): ?>
-                    <a href="<?= $buildUrl($i) ?>&limite=<?= $actual ?>" 
-                       class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all
-                              <?= $i == $paginaActual 
-                                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' 
-                                  : 'bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600' ?>">
-                        <?= $i ?>
-                    </a>
-                <?php endfor; ?>
-
-                <!-- Último -->
-                <?php if ($fin < $totalPaginas): ?>
-                    <?php if ($fin < $totalPaginas - 1): ?><span class="px-2 text-slate-400">...</span><?php endif; ?>
-                    <a href="<?= $buildUrl($totalPaginas) ?>&limite=<?= $actual ?>" class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-500 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-medium"><?= $totalPaginas ?></a>
-                <?php endif; ?>
-
-                <!-- Next -->
-                <a href="<?= $buildUrl(min($totalPaginas, $paginaActual + 1)) ?>&limite=<?= $actual ?>" 
-                   class="p-2 rounded-lg border border-slate-200 dark:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors <?= $paginaActual >= $totalPaginas ? 'pointer-events-none opacity-50' : '' ?>">
-                    <?= Icons::get('chevron-right', 'w-4 h-4 text-slate-600 dark:text-slate-300') ?>
-                </a>
-            </div>
+    <?php
+    // Preparar contenido de las filas
+    ob_start();
+    foreach ($ventas as $v): 
+        $status = $v['estado_pago'] ?? 'Pagada';
+        $isPaid = $status === 'Pagada';
+    ?>
+    <tr class="hover:bg-slate-50 dark:hover:bg-slate-600/30 transition-colors">
+        <td class="px-6 py-4 font-mono text-slate-500 dark:text-slate-400">#<?= str_pad($v['id'], 5, '0', STR_PAD_LEFT) ?></td>
+        <td class="px-6 py-4 text-slate-600 dark:text-slate-300">
+            <?= (new DateTime($v['created_at']))->format('d/m/Y h:i A') ?>
+        </td>
+        <td class="px-6 py-4">
+            <?php if (!empty($v['cliente_nombre'])): ?>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-xs font-bold">
+                        <?= strtoupper(substr($v['cliente_nombre'], 0, 1)) ?>
+                    </div>
+                    <div>
+                        <p class="font-medium text-slate-800 dark:text-white"><?= htmlspecialchars($v['cliente_nombre']) ?></p>
+                        <?php if (!empty($v['numero_documento'])): ?>
+                            <p class="text-xs text-slate-400"><?= htmlspecialchars($v['numero_documento']) ?></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php else: ?>
+                <span class="italic text-slate-400">Cliente General</span>
             <?php endif; ?>
-        </div>
-        <?php endif; ?>
-    <?php endif; ?>
+        </td>
+        <td class="px-6 py-4 text-right font-bold text-slate-700 dark:text-slate-200">
+            $<?= number_format($v['total_usd'], 2) ?>
+        </td>
+        <td class="px-6 py-4 text-right font-medium text-slate-500 dark:text-slate-400">
+            Bs <?= number_format($v['total_ves'], 2) ?>
+        </td>
+        <td class="px-6 py-4 text-center">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium <?= $isPaid ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' ?>">
+                <span class="w-1.5 h-1.5 rounded-full <?= $isPaid ? 'bg-emerald-500' : 'bg-red-500' ?>"></span>
+                <?= $status ?>
+            </span>
+        </td>
+        <td class="px-6 py-4 text-center">
+            <div class="flex justify-center gap-2">
+                <a href="index.php?controlador=venta&accion=recibo&id=<?= $v['id'] ?>" target="_blank" class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg transition-colors" title="Ver Recibo">
+                    <?= Icons::get('printer', 'w-4 h-4') ?>
+                </a>
+                <?php if (!$isPaid): ?>
+                    <form action="index.php?controlador=venta&accion=pagarVenta" method="POST" class="inline" onsubmit="return confirm('¿Confirmar pago de esta venta?')">
+                        <?= \App\Helpers\Security::csrfField() ?>
+                        <input type="hidden" name="id" value="<?= $v['id'] ?>">
+                        <button type="submit" class="p-2 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors" title="Marcar como Pagada">
+                            <?= Icons::get('check', 'w-4 h-4') ?>
+                        </button>
+                    </form>
+                <?php endif; ?>
+            </div>
+        </td>
+    </tr>
+    <?php endforeach; 
+    $tableContent = ob_get_clean();
+
+    echo \App\Core\View::component('table', [
+        'headers' => [
+            ['label' => 'ID', 'align' => 'left'],
+            ['label' => 'Fecha', 'align' => 'left'],
+            ['label' => 'Cliente', 'align' => 'left'],
+            ['label' => 'Total USD', 'align' => 'right'],
+            ['label' => 'Total VES', 'align' => 'right'],
+            ['label' => 'Estado', 'align' => 'center'],
+            ['label' => 'Acciones', 'align' => 'center']
+        ],
+        'content' => \App\Core\View::raw($tableContent),
+        'empty' => empty($ventas),
+        'emptyMsg' => 'No se encontraron ventas',
+        'pagination' => [
+            'current' => $paginaActual ?? 1,
+            'total' => $totalPaginas ?? 1,
+            'limit' => $porPagina ?? 20,
+            'url_builder' => $buildUrl,
+            'limit_name' => 'limite'
+        ]
+    ]);
+    ?>
 </div>

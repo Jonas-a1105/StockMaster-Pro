@@ -1,33 +1,36 @@
 <?php
 namespace App\Models;
 
+use App\Core\BaseModel;
 use App\Core\Database;
+use App\Domain\Enums\MovementType;
 use \PDO;
 
-class Movimiento {
-    private $db;
+class Movimiento extends BaseModel {
+    protected $table = 'movimientos';
+    protected $fillable = [
+        'user_id', 'producto_id', 'productoNombre', 'tipo', 
+        'motivo', 'cantidad', 'nota', 'proveedor', 'fecha'
+    ];
+    protected $timestamps = false; // La tabla usa 'fecha' en lugar de created_at/updated_at por ahora
 
     public function __construct() {
-        $this->db = Database::conectar();
+        parent::__construct();
     }
 
     /**
      * Crea un nuevo registro de movimiento
      */
     public function crear($userId, $productoId, $productoNombre, $tipo, $motivo, $cantidad, $nota, $proveedor) {
-        $query = "INSERT INTO movimientos (user_id, producto_id, productoNombre, tipo, motivo, cantidad, nota, proveedor) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([
-            $userId, 
-            $productoId, 
-            $productoNombre, 
-            $tipo, 
-            $motivo, 
-            $cantidad, 
-            $nota, 
-            $proveedor
+        return $this->create([
+            'user_id' => $userId,
+            'producto_id' => $productoId,
+            'productoNombre' => $productoNombre,
+            'tipo' => $tipo,
+            'motivo' => $motivo,
+            'cantidad' => $cantidad,
+            'nota' => $nota,
+            'proveedor' => $proveedor
         ]);
     }
 
@@ -35,89 +38,70 @@ class Movimiento {
      * Obtiene todos los movimientos de un usuario, con filtros
      */
     public function obtenerTodos($userId, $filtros = []) {
-        // Compatibilidad hacia atrás: si filtros es un número, es el límite
         if (is_numeric($filtros)) {
             $filtros = ['limit' => $filtros];
         }
 
-        $sql = "SELECT m.*, p.nombre as productoNombreActual, 
-                       COALESCE(pr.nombre, m.proveedor) as proveedor
-                FROM movimientos m
-                LEFT JOIN productos p ON m.producto_id = p.id AND m.user_id = p.user_id
-                LEFT JOIN proveedores pr ON p.proveedor_id = pr.id AND p.user_id = pr.user_id
-                WHERE m.user_id = ?";
-        
-        $params = [$userId];
+        $query = $this->query()
+            ->select(['movimientos.*'])
+            ->selectRaw('productos.nombre as productoNombreActual')
+            ->selectRaw('COALESCE(proveedores.nombre, movimientos.proveedor) as proveedor')
+            ->leftJoinRaw('productos ON movimientos.producto_id = productos.id AND movimientos.user_id = productos.user_id')
+            ->leftJoinRaw('proveedores ON productos.proveedor_id = proveedores.id AND productos.user_id = proveedores.user_id')
+            ->where('movimientos.user_id', $userId);
 
         if (!empty($filtros['producto'])) {
-            $sql .= " AND (m.productoNombre LIKE ? OR p.nombre LIKE ?)";
-            $params[] = '%' . $filtros['producto'] . '%';
-            $params[] = '%' . $filtros['producto'] . '%';
+            $query->whereRaw("(movimientos.productoNombre LIKE ? OR productos.nombre LIKE ?)", [
+                '%' . $filtros['producto'] . '%', '%' . $filtros['producto'] . '%'
+            ]);
         }
 
         if (!empty($filtros['producto_id'])) {
-            $sql .= " AND m.producto_id = ?";
-            $params[] = $filtros['producto_id'];
+            $query->where('movimientos.producto_id', $filtros['producto_id']);
         }
 
         if (!empty($filtros['tipo'])) {
-            $sql .= " AND m.tipo = ?";
-            $params[] = $filtros['tipo'];
+            $query->where('movimientos.tipo', $filtros['tipo']);
         }
         
         if (!empty($filtros['fecha_inicio'])) {
-            $sql .= " AND m.fecha >= ?";
-            $params[] = $filtros['fecha_inicio'];
+            $query->where('movimientos.fecha', '>=', $filtros['fecha_inicio']);
         }
         if (!empty($filtros['fecha_fin'])) {
-            $sql .= " AND m.fecha <= ?";
-            $params[] = $filtros['fecha_fin'] . ' 23:59:59';
+            $query->where('movimientos.fecha', '<=', $filtros['fecha_fin'] . ' 23:59:59');
         }
 
-        $sql .= " ORDER BY m.fecha DESC";
+        $query->orderBy('movimientos.fecha', 'DESC');
 
         if (!empty($filtros['limit'])) {
-            $sql .= " LIMIT " . (int)$filtros['limit'];
-            if (!empty($filtros['offset'])) {
-                $sql .= " OFFSET " . (int)$filtros['offset'];
-            }
+            $query->limit($filtros['limit'])->offset($filtros['offset'] ?? 0);
         }
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
+        return $query->get();
     }
 
     /**
      * Cuenta el total de movimientos para paginación
      */
     public function contarTodos($userId, $filtros = []) {
-        $sql = "SELECT COUNT(*) FROM movimientos m WHERE m.user_id = ?";
-        $params = [$userId];
+        $query = $this->query()->where('user_id', $userId);
 
         if (!empty($filtros['producto'])) {
-            $sql .= " AND m.productoNombre LIKE ?";
-            $params[] = '%' . $filtros['producto'] . '%';
+            $query->where('productoNombre', 'LIKE', '%' . $filtros['producto'] . '%');
         }
         if (!empty($filtros['producto_id'])) {
-            $sql .= " AND m.producto_id = ?";
-            $params[] = $filtros['producto_id'];
+            $query->where('producto_id', $filtros['producto_id']);
         }
         if (!empty($filtros['tipo'])) {
-            $sql .= " AND m.tipo = ?";
-            $params[] = $filtros['tipo'];
+            $query->where('tipo', $filtros['tipo']);
         }
         if (!empty($filtros['fecha_inicio'])) {
-            $sql .= " AND m.fecha >= ?";
-            $params[] = $filtros['fecha_inicio'];
+            $query->where('fecha', '>=', $filtros['fecha_inicio']);
         }
         if (!empty($filtros['fecha_fin'])) {
-            $sql .= " AND m.fecha <= ?";
-            $params[] = $filtros['fecha_fin'] . ' 23:59:59';
+            $query->where('fecha', '<=', $filtros['fecha_fin'] . ' 23:59:59');
         }
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchColumn();
+        return $query->count();
     }
 }

@@ -1,153 +1,100 @@
 <?php
 namespace App\Models;
 
+use App\Core\BaseModel;
 use App\Core\Database;
+use App\Core\QueryBuilder;
 use \PDO;
 
-class Cliente {
-    private $db;
+class Cliente extends BaseModel {
+    protected $table = 'clientes';
+    protected $fillable = [
+        'user_id', 'nombre', 'tipo_documento', 'numero_documento', 
+        'telefono', 'email', 'direccion', 'tipo_cliente', 
+        'limite_credito', 'activo', 'created_at', 'updated_at'
+    ];
+    protected $timestamps = true;
 
     public function __construct() {
-        $this->db = Database::conectar();
+        parent::__construct();
     }
 
     /**
      * Crear un nuevo cliente
      */
-    public function crear($userId, $nombre, $tipoDocumento, $numeroDocumento, $telefono, $email, $direccion, $tipoCliente, $limiteCredito) {
-        $query = "INSERT INTO clientes (user_id, nombre, tipo_documento, numero_documento, telefono, email, direccion, tipo_cliente, limite_credito) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        $stmt = $this->db->prepare($query);
-        $exito = $stmt->execute([
-            $userId, 
-            $nombre, 
-            $tipoDocumento, 
-            $numeroDocumento, 
-            $telefono, 
-            $email, 
-            $direccion, 
-            $tipoCliente, 
-            $limiteCredito
-        ]);
-        
-        if ($exito) {
-            return $this->db->lastInsertId();
-        }
-        return false;
+    public function crear($data) {
+        return $this->create($data);
     }
 
     /**
      * Obtener todos los clientes de un usuario con filtros
      */
     public function obtenerTodos($userId, $busqueda = '', $soloActivos = true) {
-        $query = "SELECT * FROM clientes WHERE user_id = ?";
-        $params = [$userId];
-
-        if (!empty($busqueda)) {
-            $query .= " AND (nombre LIKE ? OR numero_documento LIKE ? OR email LIKE ?)";
-            $params[] = '%' . $busqueda . '%';
-            $params[] = '%' . $busqueda . '%';
-            $params[] = '%' . $busqueda . '%';
-        }
-
-        if ($soloActivos) {
-            $query .= " AND activo = 1";
-        }
-
-        $query .= " ORDER BY nombre ASC";
-
-        $stmt = $this->db->prepare($query);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
+        return $this->buscarStandard($userId, ['nombre', 'numero_documento', 'email'], $busqueda, $soloActivos)
+            ->orderBy('nombre', 'ASC')
+            ->get();
     }
 
     /**
      * Obtener un cliente por ID
      */
     public function obtenerPorId($userId, $id) {
-        $query = "SELECT * FROM clientes WHERE id = ? AND user_id = ?";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$id, $userId]);
-        return $stmt->fetch();
+        return $this->query()
+            ->where('id', $id)
+            ->where('user_id', $userId)
+            ->first();
     }
 
     /**
      * Actualizar datos de un cliente
      */
-    public function actualizar($userId, $id, $nombre, $tipoDocumento, $numeroDocumento, $telefono, $email, $direccion, $tipoCliente, $limiteCredito) {
-        $query = "UPDATE clientes SET 
-                  nombre = ?, 
-                  tipo_documento = ?, 
-                  numero_documento = ?, 
-                  telefono = ?, 
-                  email = ?, 
-                  direccion = ?, 
-                  tipo_cliente = ?, 
-                  limite_credito = ? 
-                  WHERE id = ? AND user_id = ?";
-        
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([
-            $nombre, 
-            $tipoDocumento, 
-            $numeroDocumento, 
-            $telefono, 
-            $email, 
-            $direccion, 
-            $tipoCliente, 
-            $limiteCredito, 
-            $id, 
-            $userId
-        ]);
+    public function actualizar($id, $data) {
+        return parent::update($id, $data) > 0;
     }
 
     /**
      * Desactivar un cliente (soft delete)
      */
     public function desactivar($userId, $id) {
-        $query = "UPDATE clientes SET activo = 0 WHERE id = ? AND user_id = ?";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([$id, $userId]);
+        return $this->query()
+            ->where('id', $id)
+            ->where('user_id', $userId)
+            ->update(['activo' => 0]) > 0;
     }
 
     /**
      * Reactivar un cliente
      */
     public function reactivar($userId, $id) {
-        $query = "UPDATE clientes SET activo = 1 WHERE id = ? AND user_id = ?";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([$id, $userId]);
+        return $this->query()
+            ->where('id', $id)
+            ->where('user_id', $userId)
+            ->update(['activo' => 1]) > 0;
     }
 
     /**
      * Buscar clientes para el POS (autocompletar)
      */
     public function buscarParaPOS($userId, $termino) {
-        $query = "SELECT id, nombre, numero_documento, tipo_documento, limite_credito 
-                  FROM clientes 
-                  WHERE user_id = ? 
-                  AND (nombre LIKE ? OR numero_documento LIKE ?) 
-                  AND activo = 1 
-                  LIMIT 10";
-        
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$userId, '%' . $termino . '%', '%' . $termino . '%']);
-        return $stmt->fetchAll();
+        return $this->query()
+            ->select(['id', 'nombre', 'numero_documento', 'tipo_documento', 'limite_credito'])
+            ->where('user_id', $userId)
+            ->whereRaw("(nombre LIKE ? OR numero_documento LIKE ?)", ['%' . $termino . '%', '%' . $termino . '%'])
+            ->where('activo', 1)
+            ->limit(10)
+            ->get();
     }
 
     /**
      * Obtener la deuda total de un cliente (ventas pendientes)
      */
     public function obtenerDeuda($clienteId) {
-        $query = "SELECT COALESCE(SUM(total_usd), 0) as deuda_total 
-                  FROM ventas 
-                  WHERE cliente_id = ? AND estado_pago = 'Pendiente'";
-        
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$clienteId]);
-        $resultado = $stmt->fetch();
-        return (float)$resultado['deuda_total'];
+        $result = QueryBuilder::table('ventas')
+            ->selectRaw("COALESCE(SUM(total_usd), 0) as deuda_total")
+            ->where('cliente_id', $clienteId)
+            ->where('estado_pago', 'Pendiente')
+            ->first();
+        return (float)$result['deuda_total'];
     }
 
     /**
@@ -155,40 +102,28 @@ class Cliente {
      */
     public function obtenerHistorialCompras($clienteId, $limite = 20) {
         // 1. Obtener las ventas principales
-        $query = "SELECT v.* FROM ventas v
-                  WHERE v.cliente_id = ?
-                  ORDER BY v.created_at DESC
-                  LIMIT ?";
-        
-        $stmt = $this->db->prepare($query);
-        $stmt->bindValue(1, $clienteId, PDO::PARAM_INT);
-        $stmt->bindValue(2, $limite, PDO::PARAM_INT);
-        $stmt->execute();
-        $ventas = $stmt->fetchAll();
+        $ventas = QueryBuilder::table('ventas')
+            ->where('cliente_id', $clienteId)
+            ->orderBy('created_at', 'DESC')
+            ->limit($limite)
+            ->get();
 
         if (empty($ventas)) {
             return [];
         }
 
-        // 2. Obtener los IDs de las ventas encontradas
+        // 2. Extraer IDs
         $ventaIds = array_column($ventas, 'id');
-        
-        // 3. Obtener los items de esas ventas (Soporte Multi-DB: Evitamos GROUP_CONCAT específico)
-        // Usamos placeholders dinámicos (?, ?, ?)
-        $placeholders = implode(',', array_fill(0, count($ventaIds), '?'));
-        
-        $queryItems = "SELECT venta_id, cantidad, nombre_producto 
-                       FROM venta_items 
-                       WHERE venta_id IN ($placeholders)";
-        
-        $stmtItems = $this->db->prepare($queryItems);
-        $stmtItems->execute($ventaIds);
-        $todosItems = $stmtItems->fetchAll();
+
+        // 3. Obtener los items de esas ventas
+        $todosItems = QueryBuilder::table('venta_items')
+            ->whereIn('venta_id', $ventaIds)
+            ->get();
 
         // 4. Agrupar items por venta en memoria (PHP)
         $itemsPorVenta = [];
         foreach ($todosItems as $item) {
-            $itemsPorVenta[$item['venta_id']][] = $item['cantidad'] . 'x ' . $item['nombre_producto'];
+            $itemsPorVenta[$item['venta_id']][] = $item['cantidad'] . 'x ' . ($item['nombre_producto'] ?? 'Producto');
         }
 
         // 5. Asignar la cadena formateada a cada venta
@@ -209,17 +144,13 @@ class Cliente {
      * Obtener estadísticas de un cliente
      */
     public function obtenerEstadisticas($clienteId) {
-        $query = "SELECT 
-                  COUNT(*) as total_compras,
-                  COALESCE(SUM(total_usd), 0) as total_gastado,
-                  COALESCE(SUM(CASE WHEN estado_pago = 'Pendiente' THEN total_usd ELSE 0 END), 0) as deuda_actual,
-                  MAX(created_at) as ultima_compra
-                  FROM ventas
-                  WHERE cliente_id = ?";
-        
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$clienteId]);
-        return $stmt->fetch();
+        return QueryBuilder::table('ventas')
+            ->selectRaw("COUNT(*) as total_compras")
+            ->selectRaw("COALESCE(SUM(total_usd), 0) as total_gastado")
+            ->selectRaw("COALESCE(SUM(CASE WHEN estado_pago = 'Pendiente' THEN total_usd ELSE 0 END), 0) as deuda_actual")
+            ->selectRaw("MAX(created_at) as ultima_compra")
+            ->where('cliente_id', $clienteId)
+            ->first();
     }
 
     /**

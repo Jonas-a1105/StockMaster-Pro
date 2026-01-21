@@ -15,71 +15,84 @@ const API = {
      * @param {Object} params - Parámetros query
      * @returns {Promise} Respuesta JSON
      */
+    /**
+     * Procesa la respuesta de forma estandarizada
+     */
+    async _handleResponse(response) {
+        if (!response.ok) {
+            const errorMsg = `Error del Servidor (HTTP ${response.status})`;
+            if (typeof showToast === 'function') showToast(errorMsg, 'error');
+            throw new Error(errorMsg);
+        }
+
+        const text = await response.text();
+        try {
+            const result = JSON.parse(text);
+
+            // Si el backend envía error=true o success=false con mensaje
+            if (result && result.success === false && result.message) {
+                if (typeof showToast === 'function') showToast(result.message, 'error');
+            }
+
+            if (result && result.success && result.hasOwnProperty('data')) {
+                return result.data;
+            }
+            return result;
+        } catch (e) {
+            console.error('Respuesta no v\u00e1lida:', text);
+            const msg = 'El servidor devolvi\u00f3 una respuesta inv\u00e1lida';
+            if (typeof showToast === 'function') showToast(msg, 'error');
+            throw new Error(msg);
+        }
+    },
+
     async get(url, params = {}) {
         const queryString = new URLSearchParams(params).toString();
         const fullUrl = queryString ? `${url}&${queryString}` : url;
 
         try {
             const response = await fetch(fullUrl);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return await response.json();
+            return await this._handleResponse(response);
         } catch (error) {
             console.error('API GET Error:', error);
             throw error;
         }
     },
 
-    /**
-     * Realiza una petición POST con JSON
-     * @param {string} url - URL de la petición
-     * @param {Object} data - Datos a enviar
-     * @returns {Promise} Respuesta JSON
-     */
     async post(url, data = {}) {
         try {
             const response = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': window.csrfToken || ''
+                },
+                body: JSON.stringify({
+                    ...(data || {}),
+                    csrf_token: window.csrfToken || ''
+                })
             });
 
-            const text = await response.text();
-
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                console.error('Respuesta no es JSON:', text);
-                throw new Error('El servidor devolvió una respuesta inválida');
-            }
+            return await this._handleResponse(response);
         } catch (error) {
             console.error('API POST Error:', error);
             throw error;
         }
     },
 
-    /**
-     * Realiza una petición POST con FormData
-     * @param {string} url - URL de la petición
-     * @param {FormData|HTMLFormElement} formData - Datos del formulario
-     * @returns {Promise} Respuesta JSON
-     */
     async postForm(url, formData) {
         const data = formData instanceof FormData ? formData : new FormData(formData);
 
         try {
             const response = await fetch(url, {
                 method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': window.csrfToken || ''
+                },
                 body: data
             });
 
-            const text = await response.text();
-
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                console.error('Respuesta no es JSON:', text);
-                throw new Error('El servidor devolvió una respuesta inválida');
-            }
+            return await this._handleResponse(response);
         } catch (error) {
             console.error('API POST Form Error:', error);
             throw error;
@@ -107,6 +120,9 @@ const Endpoints = {
     obtenerAlertas: (umbral) =>
         API.get(`index.php?controlador=producto&accion=apiObtenerAlertas&umbral=${umbral}`),
 
+    eliminarMasivo: (ids) =>
+        API.post('index.php?controlador=producto&accion=eliminarMasivo', { ids }),
+
     // Proveedores
     obtenerProveedor: (id) =>
         API.get(`index.php?controlador=proveedor&accion=apiObtener&id=${id}`),
@@ -114,9 +130,25 @@ const Endpoints = {
     actualizarProveedor: (formData) =>
         API.postForm('index.php?controlador=proveedor&accion=actualizar', formData),
 
+    // Clientes
+    buscarClientes: (term) =>
+        API.get(`index.php?controlador=cliente&accion=buscarParaPOS&term=${encodeURIComponent(term)}`),
+
+    desactivarCliente: (id) =>
+        API.post('index.php?controlador=cliente&accion=desactivar', { id }),
+
+    reactivarCliente: (id) =>
+        API.post('index.php?controlador=cliente&accion=activar', { id }),
+
     // Dashboard
     datosGraficos: () =>
         API.get('index.php?controlador=dashboard&accion=apiDatosGraficos'),
+
+    ventasPeriodo: (dias) =>
+        API.get(`index.php?controlador=dashboard&accion=apiVentasPeriodo&dias=${dias}`),
+
+    footerStats: () =>
+        API.get('index.php?controlador=dashboard&accion=apiFooterStats'),
 
     // Ventas
     buscarProductosPOS: (term) =>
@@ -133,8 +165,18 @@ const Endpoints = {
         API.post('index.php?controlador=compra&accion=guardar', data),
 
     // Configuración
+    obtenerTasa: () =>
+        API.get('index.php?controlador=config&accion=obtenerTasa'),
+
     guardarTasa: (tasa) =>
         API.post('index.php?controlador=config&accion=guardarTasa', { tasa }),
+
+    actualizarUmbralStock: (umbral) =>
+        API.get(`index.php?controlador=perfil&accion=actualizarUmbral&umbral=${umbral}`),
+
+    // Auth
+    verificarDesbloqueo: (data) =>
+        API.post('index.php?controlador=login&accion=verificarDesbloqueo', data),
 
     // Notificaciones
     marcarTodasLeidas: () =>

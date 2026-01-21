@@ -29,6 +29,20 @@ var selectionTimeout = null;
 var searchTimer = null;
 
 // =========================================================================
+// TOGGLE TOOLS (Herramientas de exportación/importación)
+// =========================================================================
+function toggleTools(checkbox) {
+    const container = document.getElementById('tools-container');
+    if (!container) return;
+
+    if (checkbox.checked) {
+        container.classList.remove('hidden');
+    } else {
+        container.classList.add('hidden');
+    }
+}
+
+// =========================================================================
 // BÚSQUEDA CON DEBOUNCE
 // =========================================================================
 function initBusqueda() {
@@ -45,8 +59,7 @@ function initBusqueda() {
 
 async function buscarProductos(term) {
     try {
-        const res = await fetch(`index.php?controlador=producto&accion=apiBuscar&term=${encodeURIComponent(term)}`);
-        const productos = await res.json();
+        const productos = await Endpoints.buscarProductos(term);
         renderizarTabla(productos);
     } catch (e) {
         console.error('Error búsqueda:', e);
@@ -83,13 +96,13 @@ function renderizarTabla(productos) {
                 data-precio-venta-usd="${p.precioVentaUSD}"
                 data-ganancia-usd="${p.gananciaUnitariaUSD}">
                 
-                <td class="selection-col px-2 py-3 text-center">
+                <td class="selection-col px-2 py-4 text-center">
                     <input type="checkbox" name="selected_products[]" value="${p.id}" 
                            onchange="updateBulkDeleteState()"
                            class="w-4 h-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-500/30">
                 </td>
                 
-                <td class="px-4 py-3">
+                <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-gradient-to-br ${iconData.color} flex items-center justify-center flex-shrink-0">
                             ${iconData.svg}
@@ -101,25 +114,25 @@ function renderizarTabla(productos) {
                     </div>
                 </td>
                 
-                <td class="px-4 py-3 text-center">
+                <td class="px-6 py-4 text-center">
                     <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-semibold ${stockClass}">
                         ${p.stock}
                     </span>
                 </td>
                 
-                <td class="px-4 py-3 text-center">
+                <td class="px-6 py-4 text-center">
                     ${p.tiene_iva ? `<span class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-medium rounded-lg">${parseInt(p.iva_porcentaje)}%</span>` : '<span class="text-slate-400 text-xs">—</span>'}
                 </td>
                 
-                <td class="px-4 py-3 text-right">
+                <td class="px-6 py-4 text-right">
                     ${wrapPrice(p.precioCompraUSD, 'text-slate-600 dark:text-slate-300')}
                 </td>
                 
-                <td class="px-4 py-3 text-right">
+                <td class="px-6 py-4 text-right">
                     ${wrapPrice(p.precioVentaUSD, 'font-semibold text-slate-800 dark:text-white', 'text-emerald-600 dark:text-emerald-400')}
                 </td>
                 
-                <td class="px-4 py-3 text-right">
+                <td class="px-6 py-4 text-right">
                     <div class="flex flex-col items-end currency-wrapper" data-usd="${p.gananciaUnitariaUSD}" data-text-class="text-emerald-600 dark:text-emerald-400">
                         <span class="price-main font-mono text-emerald-600 dark:text-emerald-400">+$${parseFloat(p.gananciaUnitariaUSD).toFixed(2)}</span>
                         <span class="price-sec block text-xs text-slate-400">Bs. --</span>
@@ -127,11 +140,11 @@ function renderizarTabla(productos) {
                     <span class="block text-xs text-slate-400 mt-0.5">${p.margen_ganancia || 30}% margen</span>
                 </td>
                 
-                <td class="px-4 py-3 text-right hidden xl:table-cell">
+                <td class="px-6 py-4 text-right hidden xl:table-cell">
                     ${wrapPrice(valorStock, 'font-semibold text-slate-800 dark:text-white')}
                 </td>
                 
-                <td class="px-4 py-3 text-center">
+                <td class="px-6 py-4 text-center">
                     <div class="flex items-center justify-center gap-1">
                         <button onclick="editarProducto(${p.id})" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Editar">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
@@ -293,10 +306,9 @@ function initCurrencySelector() {
 // =========================================================================
 async function editarProducto(id) {
     try {
-        const res = await fetch(`index.php?controlador=producto&accion=apiObtener&id=${id}`);
-        const p = await res.json();
+        const p = await Endpoints.obtenerProducto(id);
 
-        if (p.error) throw new Error(p.error);
+        if (!p) throw new Error('Producto no encontrado');
 
         document.getElementById('editar-id').value = p.id;
         document.getElementById('editar-nombre').value = p.nombre;
@@ -594,10 +606,41 @@ function confirmarEliminar(event, form) {
     openModal('modal-eliminar-producto');
 }
 
+/**
+ * Eliminar un producto individual por ID (usado en botones onclick)
+ */
+function eliminarProducto(id) {
+    window.productoIdParaEliminar = id;
+    openModal('modal-eliminar-producto');
+}
+
 function initDeleteConfirmation() {
-    document.getElementById('btn-confirmar-borrar-producto')?.addEventListener('click', () => {
+    document.getElementById('btn-confirmar-borrar-producto')?.addEventListener('click', async () => {
+        // Si hay un formulario pendiente (tabla dinámica), usarlo
         if (window.formParaEliminar) {
             window.formParaEliminar.submit();
+            closeModal('modal-eliminar-producto');
+            return;
+        }
+
+        // Si hay un ID pendiente (botón directo), hacer fetch
+        if (window.productoIdParaEliminar) {
+            try {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'index.php?controlador=producto&accion=eliminar';
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'id';
+                input.value = window.productoIdParaEliminar;
+                form.appendChild(input);
+
+                document.body.appendChild(form);
+                form.submit();
+            } catch (e) {
+                mostrarNotificacion('Error al eliminar: ' + e.message, 'error');
+            }
             closeModal('modal-eliminar-producto');
         }
     });
@@ -622,12 +665,7 @@ function confirmarEliminacionMasiva() {
 
 async function ejecutarEliminacionMasiva(ids) {
     try {
-        const res = await fetch('index.php?controlador=producto&accion=eliminarMasivo', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids })
-        });
-        const data = await res.json();
+        const data = await Endpoints.eliminarMasivo(ids);
 
         if (data.success) {
             mostrarNotificacion(`${data.eliminados} productos eliminados`, 'success');
@@ -780,23 +818,7 @@ window.Productos = {
 };
 
 // Funciones que deben estar globales para onclick en HTML
+window.inicializarProductos = initProductos;
 window.editarProducto = editarProducto;
-window.exportarInventario = exportarInventario;
-window.exportarInventarioPDF = exportarInventarioPDF;
-window.importarInventario = importarInventario;
-window.toggleSelectionMode = toggleSelectionMode;
-window.toggleSelectAll = toggleSelectAll;
-window.updateBulkDeleteState = updateBulkDeleteState;
-window.confirmarEliminar = confirmarEliminar;
-window.confirmarEliminacionMasiva = confirmarEliminacionMasiva;
-window.procesarEliminacionMasiva = procesarEliminacionMasiva;
-window.ejecutarEliminacionMasiva = ejecutarEliminacionMasiva;
-window.calcularPreviewAgregar = calcularPreviewAgregar;
-window.calcularPreviewEditar = calcularPreviewEditar;
-
-// Inicializar cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initProductos);
-} else {
-    initProductos();
-}
+// ... rest of globals ...
+window.toggleTools = toggleTools;

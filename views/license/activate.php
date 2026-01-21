@@ -36,6 +36,7 @@ use App\Helpers\Icons;
             <?php endif; ?>
 
             <form action="index.php?controlador=license&accion=activar" method="POST" class="space-y-6">
+                <?= \App\Helpers\Security::csrfField() ?>
                 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Clave de Licencia</label>

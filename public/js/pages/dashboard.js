@@ -37,14 +37,16 @@ function initDashboard() {
         });
     }
 
-    // Escuchar cambios en tasa de cambio
-    window.addEventListener('tasa-cambio-actualizada', (e) => {
-        actualizarKpisDashboard(e.detail.tasa);
-    });
+    // Escuchar cambios en tasa de cambio (Reactividad)
+    if (window.Store) {
+        Store.subscribe('tasa', (nuevaTasa) => {
+            actualizarKpisDashboard(nuevaTasa);
+        });
 
-    // Intentar actualizar si ya hay tasa cargada
-    if (window.ExchangeRate && window.ExchangeRate.tasa > 0) {
-        actualizarKpisDashboard(window.ExchangeRate.tasa);
+        // Carga inicial
+        if (Store.tasa > 0) {
+            actualizarKpisDashboard(Store.tasa);
+        }
     }
 
     console.log('[Dashboard] Módulo inicializado ✓');
@@ -97,8 +99,12 @@ async function cargarGraficoVentas(dias) {
     }
 
     try {
-        const response = await fetch(`index.php?controlador=dashboard&accion=apiVentasPeriodo&dias=${dias}`);
-        const data = await response.json();
+        const data = await Endpoints.ventasPeriodo(dias);
+
+        if (!Array.isArray(data)) {
+            console.error('Error: Datos recibidos no son un array', data);
+            return;
+        }
 
         const labels = data.map(d => d.label);
         const valores = data.map(d => d.total_usd || 0);

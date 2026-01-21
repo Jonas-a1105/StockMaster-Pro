@@ -20,17 +20,47 @@ function abrirModal(modalId) {
             document.body.appendChild(modal);
         }
 
+        // Agregar atributos ARIA para accesibilidad
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+
+        // Standardized Transitions (Backdrop & Panel)
+        const backdrop = document.getElementById(`${modalId}-backdrop`);
+        const panel = document.getElementById(`${modalId}-panel`);
+
+        // IMPORTANT: Reset animation state BEFORE showing modal
+        if (backdrop) backdrop.classList.add('opacity-0');
+        if (panel) panel.classList.add('opacity-0', 'translate-y-4', 'sm:scale-95');
+
+        // Initial Display
         modal.classList.remove('hidden');
-        // Asegurar que el display sea flex para centrado (Tailwind 'hidden' usa display:none)
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
 
-        // Disparar evento para que otros scripts puedan inicializar componentes dentro del modal
+        // Trigger animations in next frame (after display is set)
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (backdrop) backdrop.classList.remove('opacity-0');
+                if (panel) panel.classList.remove('opacity-0', 'translate-y-4', 'sm:scale-95');
+            });
+        });
+
+        // Autofocus in the first input/textarea del modal
         setTimeout(() => {
+            const firstInput = modal.querySelector('input:not([type="hidden"]), textarea, select');
+            if (firstInput) {
+                firstInput.focus();
+            } else {
+                // Si no hay inputs, enfocar el botón de cerrar o el modal mismo
+                const closeBtn = modal.querySelector('button[aria-label="Close"], .close-btn');
+                if (closeBtn) closeBtn.focus();
+            }
+
             modal.dispatchEvent(new CustomEvent('modal:opened', { bubbles: true, detail: { modalId } }));
-        }, 50);
+        }, 300); // Wait for transition
     }
 }
+
 
 /**
  * Cierra un modal por ID
@@ -39,8 +69,17 @@ function abrirModal(modalId) {
 function cerrarModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
+        const backdrop = document.getElementById(`${modalId}-backdrop`);
+        const panel = document.getElementById(`${modalId}-panel`);
+
+        if (backdrop) backdrop.classList.add('opacity-0');
+        if (panel) panel.classList.add('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
+
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }, 300); // Match transition duration
     }
 }
 
@@ -120,14 +159,8 @@ function configurarCierreModales() {
         };
     });
 
-    // Cerrar al hacer click fuera del contenido
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-    });
+    // NOTE: Click-outside close is handled by backdrop onclick in modal.php
+    // Removed legacy .modal click handler to avoid conflicts with modal-wrapper structure
 
     // Cerrar con tecla ESC
     document.addEventListener('keydown', (e) => {

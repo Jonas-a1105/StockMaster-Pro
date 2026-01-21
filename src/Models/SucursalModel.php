@@ -1,77 +1,62 @@
 <?php
 namespace App\Models;
 
+use App\Core\BaseModel;
 use App\Core\Database;
+use App\Core\QueryBuilder;
 
 /**
  * Modelo de Sucursales / Almacenes
  */
-class SucursalModel {
-    
-    private $db;
+class SucursalModel extends BaseModel {
+    protected $table = 'sucursales';
     
     public function __construct() {
-        $this->db = Database::conectar();
+        parent::__construct();
     }
     
     /**
      * Obtener todas las sucursales de un usuario
      */
     public function obtenerTodas($userId, $soloActivas = true) {
-        $sql = "SELECT * FROM sucursales WHERE user_id = ?";
+        $query = $this->query()->where('user_id', $userId);
         if ($soloActivas) {
-            $sql .= " AND activa = 1";
+            $query->where('activa', 1);
         }
-        $sql .= " ORDER BY es_principal DESC, nombre ASC";
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$userId]);
-        return $stmt->fetchAll();
+        return $query->orderBy('es_principal', 'DESC')->orderBy('nombre', 'ASC')->get();
     }
     
     /**
      * Obtener sucursal por ID
      */
     public function obtenerPorId($userId, $id) {
-        $stmt = $this->db->prepare("SELECT * FROM sucursales WHERE id = ? AND user_id = ?");
-        $stmt->execute([$id, $userId]);
-        return $stmt->fetch();
+        return $this->query()->where('id', $id)->where('user_id', $userId)->first();
     }
     
     /**
      * Obtener sucursal principal
      */
     public function obtenerPrincipal($userId) {
-        $stmt = $this->db->prepare("SELECT * FROM sucursales WHERE user_id = ? AND es_principal = 1 LIMIT 1");
-        $stmt->execute([$userId]);
-        return $stmt->fetch();
+        return $this->query()->where('user_id', $userId)->where('es_principal', 1)->first();
     }
     
     /**
      * Crear nueva sucursal
      */
     public function crear($userId, $datos) {
-        // Si es la primera o se marca como principal, desmarcar las demás
         if (!empty($datos['es_principal'])) {
-            $this->db->prepare("UPDATE sucursales SET es_principal = 0 WHERE user_id = ?")->execute([$userId]);
+            $this->query()->where('user_id', $userId)->update(['es_principal' => 0]);
         }
         
-        $stmt = $this->db->prepare("
-            INSERT INTO sucursales (user_id, nombre, codigo, direccion, telefono, email, es_principal)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ");
-        
-        $stmt->execute([
-            $userId,
-            $datos['nombre'],
-            $datos['codigo'] ?? null,
-            $datos['direccion'] ?? null,
-            $datos['telefono'] ?? null,
-            $datos['email'] ?? null,
-            $datos['es_principal'] ?? 0
+        return $this->create([
+            'user_id' => $userId,
+            'nombre' => $datos['nombre'],
+            'codigo' => $datos['codigo'] ?? null,
+            'direccion' => $datos['direccion'] ?? null,
+            'telefono' => $datos['telefono'] ?? null,
+            'email' => $datos['email'] ?? null,
+            'es_principal' => $datos['es_principal'] ?? 0
         ]);
-        
-        return $this->db->lastInsertId();
     }
     
     /**
@@ -79,103 +64,84 @@ class SucursalModel {
      */
     public function actualizar($userId, $id, $datos) {
         if (!empty($datos['es_principal'])) {
-            $this->db->prepare("UPDATE sucursales SET es_principal = 0 WHERE user_id = ?")->execute([$userId]);
+            $this->query()->where('user_id', $userId)->update(['es_principal' => 0]);
         }
         
-        $stmt = $this->db->prepare("
-            UPDATE sucursales SET 
-                nombre = ?, codigo = ?, direccion = ?, telefono = ?, email = ?, es_principal = ?, activa = ?
-            WHERE id = ? AND user_id = ?
-        ");
-        
-        return $stmt->execute([
-            $datos['nombre'],
-            $datos['codigo'] ?? null,
-            $datos['direccion'] ?? null,
-            $datos['telefono'] ?? null,
-            $datos['email'] ?? null,
-            $datos['es_principal'] ?? 0,
-            $datos['activa'] ?? 1,
-            $id,
-            $userId
-        ]);
+        return $this->query()->where('id', $id)->where('user_id', $userId)->update([
+            'nombre' => $datos['nombre'],
+            'codigo' => $datos['codigo'] ?? null,
+            'direccion' => $datos['direccion'] ?? null,
+            'telefono' => $datos['telefono'] ?? null,
+            'email' => $datos['email'] ?? null,
+            'es_principal' => $datos['es_principal'] ?? 0,
+            'activa' => $datos['activa'] ?? 1
+        ]) > 0;
     }
     
     /**
      * Obtener stock de una sucursal
      */
     public function obtenerStock($sucursalId) {
-        $stmt = $this->db->prepare("
-            SELECT ss.*, p.nombre, p.categoria, p.precioVentaUSD, p.codigo_barras
-            FROM stock_sucursales ss
-            INNER JOIN productos p ON ss.producto_id = p.id
-            WHERE ss.sucursal_id = ?
-            ORDER BY p.nombre
-        ");
-        $stmt->execute([$sucursalId]);
-        return $stmt->fetchAll();
+        return QueryBuilder::table('stock_sucursales')
+            ->select(['stock_sucursales.*'])
+            ->selectRaw('productos.nombre, productos.categoria, productos.precioVentaUSD, productos.codigo_barras')
+            ->join('productos', 'stock_sucursales.producto_id', '=', 'productos.id')
+            ->where('stock_sucursales.sucursal_id', $sucursalId)
+            ->orderBy('productos.nombre')
+            ->get();
     }
     
     /**
      * Actualizar stock de producto en sucursal
      */
     public function actualizarStock($sucursalId, $productoId, $cantidad, $tipo = 'set') {
-        // Verificar si existe el registro
-        $stmt = $this->db->prepare("SELECT * FROM stock_sucursales WHERE sucursal_id = ? AND producto_id = ?");
-        $stmt->execute([$sucursalId, $productoId]);
-        $existe = $stmt->fetch();
-        
-        if ($existe) {
+        $query = QueryBuilder::table('stock_sucursales')
+            ->where('sucursal_id', $sucursalId)
+            ->where('producto_id', $productoId);
+
+        if ($query->count() > 0) {
             if ($tipo === 'set') {
-                $sql = "UPDATE stock_sucursales SET stock = ? WHERE sucursal_id = ? AND producto_id = ?";
-                $params = [$cantidad, $sucursalId, $productoId];
+                return $query->update(['stock' => $cantidad]);
             } elseif ($tipo === 'add') {
-                $sql = "UPDATE stock_sucursales SET stock = stock + ? WHERE sucursal_id = ? AND producto_id = ?";
-                $params = [$cantidad, $sucursalId, $productoId];
+                return $query->increment('stock', $cantidad);
             } else { // subtract
-                $sql = "UPDATE stock_sucursales SET stock = GREATEST(0, stock - ?) WHERE sucursal_id = ? AND producto_id = ?";
-                $params = [$cantidad, $sucursalId, $productoId];
+                return $query->decrement('stock', $cantidad);
             }
         } else {
-            $sql = "INSERT INTO stock_sucursales (sucursal_id, producto_id, stock) VALUES (?, ?, ?)";
-            $params = [$sucursalId, $productoId, $cantidad];
+            return QueryBuilder::table('stock_sucursales')->insert([
+                'sucursal_id' => $sucursalId,
+                'producto_id' => $productoId,
+                'stock' => $cantidad
+            ]);
         }
-        
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute($params);
     }
     
     /**
      * Crear transferencia entre sucursales
      */
     public function crearTransferencia($userId, $datos) {
-        $stmt = $this->db->prepare("
-            INSERT INTO transferencias (user_id, sucursal_origen_id, sucursal_destino_id, producto_id, cantidad, nota)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-        
-        $stmt->execute([
-            $userId,
-            $datos['origen_id'],
-            $datos['destino_id'],
-            $datos['producto_id'],
-            $datos['cantidad'],
-            $datos['nota'] ?? null
+        return QueryBuilder::table('transferencias')->insert([
+            'user_id' => $userId,
+            'sucursal_origen_id' => $datos['origen_id'],
+            'sucursal_destino_id' => $datos['destino_id'],
+            'producto_id' => $datos['producto_id'],
+            'cantidad' => $datos['cantidad'],
+            'nota' => $datos['nota'] ?? null
         ]);
-        
-        return $this->db->lastInsertId();
     }
     
     /**
      * Completar transferencia
      */
     public function completarTransferencia($transferId) {
-        // Obtener datos de la transferencia
-        $stmt = $this->db->prepare("SELECT * FROM transferencias WHERE id = ? AND estado = 'Pendiente'");
-        $stmt->execute([$transferId]);
-        $transfer = $stmt->fetch();
+        // Obtener datos de la transferencia usando QueryBuilder
+        $transfer = QueryBuilder::table('transferencias')
+            ->where('id', $transferId)
+            ->where('estado', 'Pendiente')
+            ->first();
         
         if (!$transfer) return false;
+
         
         $this->db->beginTransaction();
         try {
@@ -186,9 +152,9 @@ class SucursalModel {
             $this->actualizarStock($transfer['sucursal_destino_id'], $transfer['producto_id'], $transfer['cantidad'], 'add');
             
             // Marcar como completada
-            $now = date('Y-m-d H:i:s');
-            $this->db->prepare("UPDATE transferencias SET estado = 'Completada', completed_at = ? WHERE id = ?")
-                ->execute([$now, $transferId]);
+            QueryBuilder::table('transferencias')
+                ->where('id', $transferId)
+                ->update(['estado' => 'Completada', 'completed_at' => date('Y-m-d H:i:s')]);
             
             $this->db->commit();
             return true;
@@ -202,28 +168,20 @@ class SucursalModel {
      * Obtener transferencias
      */
     public function obtenerTransferencias($userId, $estado = null, $limit = 50) {
-        $sql = "SELECT t.*, 
-                       so.nombre as origen_nombre, 
-                       sd.nombre as destino_nombre,
-                       p.nombre as producto_nombre
-                FROM transferencias t
-                INNER JOIN sucursales so ON t.sucursal_origen_id = so.id
-                INNER JOIN sucursales sd ON t.sucursal_destino_id = sd.id
-                INNER JOIN productos p ON t.producto_id = p.id
-                WHERE t.user_id = ?";
-        
-        $params = [$userId];
+        $query = QueryBuilder::table('transferencias')
+            ->select(['transferencias.*'])
+            ->selectRaw('so.nombre as origen_nombre')
+            ->selectRaw('sd.nombre as destino_nombre')
+            ->selectRaw('p.nombre as producto_nombre')
+            ->join('sucursales as so', 'transferencias.sucursal_origen_id', '=', 'so.id')
+            ->join('sucursales as sd', 'transferencias.sucursal_destino_id', '=', 'sd.id')
+            ->join('productos as p', 'transferencias.producto_id', '=', 'p.id')
+            ->where('transferencias.user_id', $userId);
         
         if ($estado) {
-            $sql .= " AND t.estado = ?";
-            $params[] = $estado;
+            $query->where('transferencias.estado', $estado);
         }
         
-        $sql .= " ORDER BY t.created_at DESC LIMIT ?";
-        $params[] = $limit;
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
+        return $query->orderBy('transferencias.created_at', 'DESC')->limit($limit)->get();
     }
 }

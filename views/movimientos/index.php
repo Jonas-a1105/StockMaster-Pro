@@ -169,11 +169,11 @@ $totalRegistros = $totalRegistros ?? 0;
                 <table class="w-full text-sm text-left">
                     <thead>
                         <tr class="text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-100 dark:border-slate-600">
-                            <th class="px-4 py-3 font-semibold">Fecha</th>
-                            <th class="px-4 py-3 font-semibold">Producto</th>
-                            <th class="px-4 py-3 font-semibold text-center">Tipo</th>
-                            <th class="px-4 py-3 font-semibold">Motivo</th>
-                            <th class="px-4 py-3 font-semibold text-right">Cant.</th>
+                            <th class="px-6 py-4 font-semibold">Fecha</th>
+                            <th class="px-6 py-4 font-semibold">Producto</th>
+                            <th class="px-6 py-4 font-semibold text-center">Tipo</th>
+                            <th class="px-6 py-4 font-semibold">Motivo</th>
+                            <th class="px-6 py-4 font-semibold text-right">Cant.</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-600">
@@ -192,29 +192,29 @@ $totalRegistros = $totalRegistros ?? 0;
                                 $fecha = new DateTime($m['fecha']);
                             ?>
                             <tr class="hover:bg-slate-50 dark:hover:bg-slate-600/30 transition-colors">
-                                <td class="px-4 py-3 whitespace-nowrap">
+                                <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="block font-medium text-slate-700 dark:text-slate-200"><?= $fecha->format('d/m/Y') ?></span>
                                     <span class="text-xs text-slate-400"><?= $fecha->format('h:i A') ?></span>
                                 </td>
-                                <td class="px-4 py-3">
+                                <td class="px-6 py-4">
                                     <p class="font-medium text-slate-800 dark:text-white truncate max-w-[150px]"><?= htmlspecialchars($m['productoNombre']) ?></p>
                                     <?php if (!empty($m['proveedor'])): ?>
                                         <p class="text-xs text-slate-400 truncate max-w-[150px]"><?= htmlspecialchars($m['proveedor']) ?></p>
                                     <?php endif; ?>
                                 </td>
-                                <td class="px-4 py-3 text-center">
+                                <td class="px-6 py-4 text-center">
                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium <?= $isEntrada ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' ?>">
                                         <?= $isEntrada ? Icons::get('arrow-down', 'w-3 h-3') : Icons::get('arrow-up', 'w-3 h-3') ?>
                                         <?= $m['tipo'] ?>
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
+                                <td class="px-6 py-4 text-slate-600 dark:text-slate-300">
                                     <?= htmlspecialchars($m['motivo']) ?>
                                     <?php if (!empty($m['nota'])): ?>
                                         <span class="block text-xs text-slate-400 italic truncate max-w-[150px]"><?= htmlspecialchars($m['nota']) ?></span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="px-4 py-3 text-right font-bold font-mono <?= $isEntrada ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' ?>">
+                                <td class="px-6 py-4 text-right font-bold font-mono <?= $isEntrada ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' ?>">
                                     <?= $isEntrada ? '+' : '-' ?><?= $m['cantidad'] ?>
                                 </td>
                             </tr>

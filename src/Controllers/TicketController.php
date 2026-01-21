@@ -1,133 +1,101 @@
 <?php
 namespace App\Controllers;
-
-use App\Core\Session;
+ 
+use App\Core\BaseController;
 use App\Models\TicketModel;
-use App\Models\TicketsModel;
-
-class TicketController {
-
+use App\Services\TicketService;
+use App\Domain\Enums\UserPlan;
+use App\Core\Session;
+use App\Exceptions\ForbiddenException;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\AppException;
+ 
+class TicketController extends BaseController {
     private $ticketModel;
-
+    private $ticketService;
+ 
     public function __construct() {
-        // --- ¡PROTECCIÓN PREMIUM! ---
-        if ($_SESSION['user_plan'] === 'free') {
+        parent::__construct();
+ 
+        // Premium Check
+        if ($this->userPlan === UserPlan::FREE->value) {
+            if ($this->request->isAjax()) {
+                throw new ForbiddenException('El soporte por tickets es una función Premium.');
+            }
             Session::flash('error', 'El soporte por tickets es una función Premium.');
-            redirect('index.php?controlador=dashboard');
+            return $this->response->redirect('index.php?controlador=dashboard');
         }
         $this->ticketModel = new TicketModel();
+        $this->ticketService = new TicketService();
     }
 
-    /**
-     * Muestra la lista de "Mis Tickets"
-     */
     public function index() {
-        $userId = $_SESSION['user_id'];
+        $userId = Session::get('user_id');
         $tickets = $this->ticketModel->obtenerTicketsPorUsuario($userId);
-        
-        $this->render('tickets/index', [
-            'tickets' => $tickets
-        ]);
+        return $this->response->view('tickets/index', ['tickets' => $tickets]);
     }
 
-    /**
-     * Muestra el formulario para crear un nuevo ticket
-     */
     public function crear() {
-        $this->render('tickets/crear');
+        return $this->response->view('tickets/crear');
     }
 
-    /**
-     * Guarda el nuevo ticket y la primera respuesta
-     */
     public function guardar() {
-        $userId = $_SESSION['user_id'];
-        $subject = $_POST['subject'] ?? '';
-        $priority = $_POST['priority'] ?? 'Media';
-        $message = $_POST['message'] ?? '';
-
-        if (empty($subject) || empty($message)) {
-            Session::flash('error', 'Asunto y Mensaje son obligatorios.');
-            redirect('index.php?controlador=ticket&accion=crear');
+        if (!$this->request->isPost()) {
+            throw new AppException('Solicitud inválida.', 405);
         }
 
-        $ticketId = $this->ticketModel->crearTicket($userId, $subject, $priority, $message);
-
+        $userId = Session::get('user_id');
+        $ticketId = $this->ticketService->createTicket($userId, $this->request->all());
+        
         if ($ticketId) {
             Session::flash('success', 'Ticket creado exitosamente.');
-            redirect('index.php?controlador=ticket&accion=ver&id=' . $ticketId);
-        } else {
-            Session::flash('error', 'No se pudo crear el ticket.');
-            redirect('index.php?controlador=ticket&accion=crear');
+            return $this->response->redirect('index.php?controlador=ticket&accion=ver&id=' . $ticketId);
         }
+        
+        throw new AppException('Error al crear el ticket.', 500);
     }
 
-    /**
-     * Muestra un ticket específico y sus respuestas (la vista de chat)
-     */
     public function ver() {
-        $userId = $_SESSION['user_id'];
-        $ticketId = (int)$_GET['id'];
+        $userId = Session::get('user_id');
+        $ticketId = $this->request->query('id', 0, 'int');
 
-        // Verificar que el ticket pertenece al usuario
         $ticket = $this->ticketModel->obtenerTicketPorId($userId, $ticketId);
         if (!$ticket) {
-            Session::flash('error', 'No tienes permiso para ver este ticket.');
-            redirect('index.php?controlador=ticket');
+            throw new ForbiddenException('No tienes permiso para ver este ticket o no existe.');
         }
         
         $respuestas = $this->ticketModel->obtenerRespuestas($ticketId);
 
-        $this->render('tickets/ver', [
+        return $this->response->view('tickets/ver', [
             'ticket' => $ticket,
             'respuestas' => $respuestas
         ]);
     }
 
-    /**
-     * Guarda una nueva respuesta del usuario
-     */
     public function responder() {
-        $userId = $_SESSION['user_id'];
-        $ticketId = (int)$_POST['ticket_id'];
-        $message = $_POST['message'] ?? '';
+        if (!$this->request->isPost()) {
+             throw new AppException('Solicitud inválida.', 405);
+        }
 
-        // Verificar que el ticket pertenece al usuario
-        $ticket = $this->ticketModel->obtenerTicketPorId($userId, $ticketId);
-        if (!$ticket || empty($message)) {
-            Session::flash('error', 'No se pudo enviar la respuesta.');
-            redirect('index.php?controlador=ticket');
+        $userId = Session::get('user_id');
+        $ticketId = $this->request->input('ticket_id', 0, 'int');
+        $message = $this->request->input('message', '');
+
+        if ($this->ticketService->replyToTicket($userId, $ticketId, $message)) {
+            Session::flash('success', 'Respuesta enviada.');
+        } else {
+            throw new AppException('Error al enviar la respuesta.');
         }
         
-        // Añadir la respuesta
-        $this->ticketModel->agregarRespuesta($ticketId, $userId, $message);
-        
-        // Marcar como "En Progreso" si el admin lo había cerrado
-        $this->ticketModel->cambiarEstado($ticketId, 'En Progreso');
-
-        Session::flash('success', 'Respuesta enviada.');
-        redirect('index.php?controlador=ticket&accion=ver&id=' . $ticketId);
+        return $this->response->redirect('index.php?controlador=ticket&accion=ver&id=' . $ticketId);
     }
     
-    /**
-     * Cierra un ticket (acción del usuario)A
-     */
     public function cerrar() {
-        $userId = $_SESSION['user_id'];
-        $ticketId = (int)$_GET['id'];
-        
-        $ticket = $this->ticketModel->obtenerTicketPorId($userId, $ticketId);
-        if ($ticket) {
-            $this->ticketModel->cambiarEstado($ticketId, 'Cerrado');
+        $userId = Session::get('user_id');
+        $id = $this->request->query('id', 0, 'int');
+        if ($this->ticketService->closeTicket($userId, $id)) {
             Session::flash('success', 'Ticket cerrado.');
         }
-        redirect('index.php?controlador=ticket&accion=ver&id=' . $ticketId);
-    }
-
-
-    private function render($vista, $data = []) {
-        extract($data);
-        $vistaContenido = __DIR__ . '/../../views/' . $vista . '.php';
-        require __DIR__ . '/../../views/layouts/main.php';
+        return $this->response->redirect('index.php?controlador=ticket&accion=ver&id=' . $id);
     }
 }

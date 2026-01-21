@@ -1,69 +1,82 @@
+# 📦 StockMaster Pro - Gestión de Inventario & POS (SaaS & Desktop)
 
-# 📦 Sistema de Gestión de Inventario & POS (SaaS)
-
-Un sistema completo de gestión de inventario y Punto de Venta (POS) basado en la web, diseñado con arquitectura **MVC** y modelo de negocio **SaaS (Software as a Service)**. Incluye gestión de planes (Free/Premium), facturación, reportes financieros y herramientas administrativas.
+Un sistema completo de gestión de inventario y Punto de Venta (POS) diseñado con arquitectura **MVC**. Este proyecto es híbrido: funciona tanto como una plataforma **SaaS web** (PHP/MySQL) como una **aplicación de escritorio independiente** (Electron/SQLite).
 
 ---
 
 ## 🚀 Características Principales
 
 ### 💼 Gestión de Negocio (SaaS)
-* **Modelo Freemium:** Sistema de planes con restricciones automáticas para usuarios Free.
-* **Periodo de Prueba (Trial):** Los nuevos usuarios reciben 30 días de Premium automáticamente.
-* **Downgrade Automático:** Al vencer el trial, el sistema limita el acceso a las funciones Free.
-* **Panel de Administración:** Gestión de usuarios, activación manual de planes y monitoreo.
-* **Aislamiento de Datos:** Arquitectura Multi-tenant donde cada usuario accede únicamente a su propia información.
+* **Modelo Freemium:** Sistema de planes (Free/Premium) con restricciones automáticas.
+* **Periodo de Prueba (Trial):** 30 días de Premium automático para nuevos usuarios.
+* **Aislamiento de Datos:** Arquitectura Multi-tenant; cada usuario accede solo a su información.
+* **Panel de Administración:** Gestión de usuarios, activación de planes y soporte técnico.
 
 ### 📦 Gestión de Inventario
-* **CRUD de Productos:** Creación y edición mediante Modales AJAX (sin recargas).
-* **Cálculos Financieros en Vivo:** Cálculo automático de precios de venta, márgenes y conversión a Moneda Local (VES) según tasa del día.
-* **Control de Stock:** Alertas automáticas (visuales y notificaciones) para stock bajo y agotado.
-* **Gestión de Proveedores:** Base de datos de proveedores vinculada al historial de entradas.
+* **CRUD Pro:** Operaciones rápidas mediante Modales AJAX.
+* **Cálculos Financieros:** Precios, márgenes y conversión automática a Moneda Local (VES).
+* **Control de Stock:** Notificaciones visuales de stock bajo o agotado.
+* **Proveedores:** Base de datos vinculada al historial de compras.
 
 ### 💰 Punto de Venta (POS)
-* **Interfaz de Venta Rápida:** Buscador en tiempo real por nombre o SKU.
-* **Carrito de Compras:** Agrega, edita y elimina ítems antes de procesar.
-* **Recibos:** Generación automática de recibos de venta imprimibles.
-* **Descuento de Stock:** Sincronización inmediata con el inventario al completar la venta.
+* **Venta Rápida:** Buscador en tiempo real por nombre o SKU.
+* **Facturación:** Generación de recibos imprimibles y descuento automático de stock.
 
 ### 📊 Dashboard y Reportes
-* **KPIs Financieros:** Visualización de Valor de Inventario, Costo Total y Ganancia Potencial.
-* **Gráficos Interactivos:** Análisis de valor por categoría y distribución de stock (Chart.js).
-* **Exportación:** Generación de reportes detallados en **PDF** y **CSV/Excel**.
-* **Tasa de Cambio:** Integración con API para tasa del dólar en tiempo real + opción de tasa manual persistente.
-
-### 🛡️ Seguridad y Soporte
-* **Autenticación Robusta:** Login, Registro y Recuperación de Contraseña (vía Email con Token seguro).
-* **Gestión de Equipos:** Los dueños de negocio pueden crear cuentas para empleados.
-* **Sistema de Tickets:** Módulo de soporte técnico interno para comunicación Usuario-Admin.
+* **KPIs y Gráficos:** Visualización de valor de inventario y ganancias (Chart.js).
+* **Exportación:** Reportes en **PDF** y **Excel/CSV**.
 
 ---
 
 ## 🛠️ Tecnologías Utilizadas
 
-* **Lenguaje:** PHP 8.0+ (Arquitectura MVC Estricta).
-* **Base de Datos:** MySQL / MariaDB.
-* **Frontend:** HTML5, CSS3 (Diseño Glassmorphism), JavaScript (Vanilla + AJAX).
-* **Dependencias (Composer):**
-    * `phpmailer/phpmailer`: Envío de correos transaccionales.
-    * `stripe/stripe-php`: (Preparado para integración de pagos).
-* **Librerías JS:**
-    * `Chart.js`: Visualización de datos.
-    * `jsPDF` & `AutoTable`: Generación de reportes PDF.
+* **Backend:** PHP 8.0+ (MVC), Slim/Core propio.
+* **Escritorio:** Electron (Proceso principal en `main.js`).
+* **Bases de Datos:** MySQL (Web) / SQLite (Escritorio).
+* **Frontend:** HTML5, CSS3 (Glassmorphism), JavaScript (Vanilla + AJAX).
+* **Librerías principales:** PHPMailer, Chart.js, jsPDF.
 
 ---
 
-## ⚙️ Instalación y Configuración
+## ⚙️ Instalación y Ejecución
 
-### 1. Requisitos Previos
-* Servidor Web (Apache/Nginx) o XAMPP/Laragon.
-* PHP 8.0 o superior.
-* Composer instalado.
+### 🌐 Modo Web (Servidor)
+1. Clona el repositorio: `git clone https://github.com/Jonas-a1105/StockMaster-Pro.git`
+2. Instala dependencias: `composer install`
+3. Configura el archivo `.env` con tus credenciales de MySQL.
 
-### 2. Clonar e Instalar Dependencias
+### 💻 Modo Escritorio (Desarrollo)
+1. Instala dependencias de Node: `npm install`
+2. Ejecuta la app: `npm start`
+*En modo desarrollo, la app usará el PHP instalado en el PATH de tu sistema.*
+
+---
+
+## 🏗️ Construcción de la Versión de Escritorio (.exe)
+
+Para generar el instalador independiente:
 ```bash
-git clone [https://github.com/Jonas_1105/sistema-inventario.git](https://github.com/tu-usuario/sistema-inventario.git)
-cd sistema-inventario
-composer install
+npm run dist
+```
+*Si tienes errores de permisos en PowerShell, usa:* `cmd /c "npm run dist"`
 
-Diseñado y Desarrollado con ❤️ por: [Jonas Mendoza] Técnico en Informática & Desarrollador Full Stack
+### ⚠️ Modo "Portable Offline" Real
+Para que el `.exe` funcione sin PHP instalado en la PC destino:
+1. Descarga **PHP for Windows** (VS16 x64 Non-Thread-Safe).
+2. Extrae el contenido en `resources/bin/php/`.
+3. Asegúrate de que `php.ini` tenga habilitadas: `pdo_sqlite`, `sqlite3`, `mbstring` y `gd`.
+4. Ejecuta `npm run dist` nuevamente.
+
+---
+
+## 🛠️ Solución de Problemas Comunes
+
+**1. Error de Scripts en PowerShell:**
+Ejecuta `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` antes de compilar.
+
+**2. Base de Datos no encontrada:**
+En la versión de escritorio, la base de datos se migra automáticamente a la carpeta de datos de usuario del sistema local (AppData) para persistencia.
+
+---
+
+Diseñado y Desarrollado con ❤️ por: **Jonas Mendoza** - Técnico en Informática & Desarrollador Full Stack

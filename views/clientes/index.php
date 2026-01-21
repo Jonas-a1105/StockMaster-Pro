@@ -10,7 +10,7 @@ $busqueda = $_GET['buscar'] ?? '';
 ?>
 
 <!-- Header -->
-<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+<div id="tabla-clientes" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
     <div>
         <h1 class="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
             <?= Icons::get('clients', 'w-7 h-7 text-indigo-500') ?>

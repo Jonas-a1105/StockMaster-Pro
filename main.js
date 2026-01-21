@@ -178,8 +178,21 @@ function createWindow() {
         app.quit();
     });
 
+    let closeAttempts = 0;
     mainWindow.on('close', (e) => {
         if (app.isQuiting) return;
+
+        // Si el usuario intenta cerrar dos veces, forzar el cierre
+        // (Útil si la web ha crasheado y no responde al IPC)
+        closeAttempts++;
+        if (closeAttempts > 1) {
+            app.isQuiting = true;
+            app.quit();
+            return;
+        }
+
+        // Restablecer intentos si no cierra después de 3 segundos
+        setTimeout(() => { closeAttempts = 0; }, 3000);
 
         // Prevenir cierre y mostrar modal HTML
         e.preventDefault();

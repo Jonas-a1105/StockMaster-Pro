@@ -29,7 +29,8 @@
 <!-- <script src="<?= BASE_URL ?>js/modules/compras.js?v=<?= time() ?>"></script> -->
 <!-- NOTA: proveedores.js ahora está en /pages/ y se carga en la vista específica -->
 <!-- <script src="<?= BASE_URL ?>js/modules/proveedores.js?v=<?= time() ?>"></script> -->
-<script src="<?= BASE_URL ?>js/modules/producto-modales.js?v=<?= time() ?>"></script>
+<!-- NOTA: producto-modales.js nunca existió, la lógica está en productos.js -->
+<!-- <script src="<?= BASE_URL ?>js/modules/producto-modales.js?v=<?= time() ?>"></script> -->
 <script src="<?= BASE_URL ?>js/modules/stock-alerts.js?v=<?= time() ?>"></script>
 
 <!-- App Principal (Inicializador) -->

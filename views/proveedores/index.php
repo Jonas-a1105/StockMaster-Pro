@@ -131,211 +131,134 @@ $buildUrl = function($page) use ($paginacion) {
                 </form>
             </div>
             
-            <div class="overflow-x-auto flex-1">
-                <table class="w-full text-sm text-left">
-                    <thead>
-                        <tr class="text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-100 dark:border-slate-600">
-                            <th class="px-4 py-3 font-semibold">Empresa</th>
-                            <th class="px-4 py-3 font-semibold">Contacto</th>
-                            <th class="px-4 py-3 font-semibold">Info Contacto</th>
-                            <th class="px-4 py-3 font-semibold text-center w-24">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 dark:divide-slate-600">
-                        <?php if (empty($proveedores)): ?>
-                            <tr>
-                                <td colspan="4" class="px-4 py-12 text-center">
-                                    <div class="flex flex-col items-center">
-                                        <?= Icons::get('suppliers', 'w-12 h-12 text-slate-200 dark:text-slate-600 mb-2') ?>
-                                        <p class="text-slate-400">No hay proveedores registrados</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($proveedores as $p): ?>
-                            <tr class="group hover:bg-slate-50 dark:hover:bg-slate-600/30 transition-colors">
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xs">
-                                            <?= strtoupper(substr($p['nombre'], 0, 2)) ?>
-                                        </div>
-                                        <span class="font-medium text-slate-800 dark:text-white"><?= htmlspecialchars($p['nombre']) ?></span>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
-                                    <?= htmlspecialchars($p['contacto']) ?>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex flex-col gap-1">
-                                        <?php if (!empty($p['telefono'])): ?>
-                                            <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                                <?= Icons::get('phone', 'w-3 h-3') ?>
-                                                <?= htmlspecialchars($p['telefono']) ?>
-                                            </div>
-                                        <?php endif; ?>
-                                        <?php if (!empty($p['email'])): ?>
-                                            <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                                <?= Icons::get('mail', 'w-3 h-3') ?>
-                                                <?= htmlspecialchars($p['email']) ?>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onclick='editarProveedor(<?= json_encode($p) ?>)' class="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-colors" title="Editar">
-                                            <?= Icons::get('edit', 'w-4 h-4') ?>
-                                        </button>
-                                        <form id="form-eliminar-<?= $p['id'] ?>" action="index.php?controlador=proveedor&accion=eliminar" method="POST" class="inline">
-                                            <input type="hidden" name="id" value="<?= $p['id'] ?>">
-                                            <button type="button" onclick="confirmarEliminar(<?= $p['id'] ?>)" class="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Eliminar">
-                                                <?= Icons::get('trash', 'w-4 h-4') ?>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Paginación y Selector -->
-            <?php if (isset($paginacion) && ($paginacion['total'] > 1 || !empty($proveedores))): ?>
-            <div class="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 dark:border-slate-600 gap-4">
-                
-                <!-- Selector Límite -->
-                <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                    <span>Mostrar</span>
-                    <select onchange="window.location.href='<?= $buildUrl(1) ?>&limit=' + this.value"
-                            class="bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 rounded-lg py-1 px-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
-                        <?php 
-                        $opciones = [5, 10, 25, 50, 100];
-                        $actual = $paginacion['limit'] ?? 10;
-                        foreach ($opciones as $op): 
-                        ?>
-                            <option value="<?= $op ?>" <?= $actual == $op ? 'selected' : '' ?>><?= $op ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <span>por pág</span>
-                </div>
-
-                <!-- Paginación Numerada -->
-                <?php if ($paginacion['total'] > 1): ?>
-                <div class="flex items-center gap-1">
-                    <?php 
-                    $paginaActual = $paginacion['current'];
-                    $totalPaginas = $paginacion['total'];
-                    $rango = 2; 
-                    $inicio = max(1, $paginaActual - $rango);
-                    $fin = min($totalPaginas, $paginaActual + $rango);
-                    ?>
-
-                    <!-- Prev -->
-                    <a href="<?= $buildUrl(max(1, $paginaActual - 1)) ?>" 
-                       class="p-2 rounded-lg border border-slate-200 dark:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors <?= $paginaActual <= 1 ? 'pointer-events-none opacity-50' : '' ?>">
-                        <?= Icons::get('chevron-left', 'w-4 h-4 text-slate-600 dark:text-slate-300') ?>
-                    </a>
-
-                    <!-- Primero -->
-                    <?php if ($inicio > 1): ?>
-                        <a href="<?= $buildUrl(1) ?>" class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-500 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-medium">1</a>
-                        <?php if ($inicio > 2): ?><span class="px-2 text-slate-400">...</span><?php endif; ?>
-                    <?php endif; ?>
-
-                    <!-- Loop -->
-                    <?php for ($i = $inicio; $i <= $fin; $i++): ?>
-                        <a href="<?= $buildUrl($i) ?>" 
-                           class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all
-                                  <?= $i == $paginaActual 
-                                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' 
-                                      : 'bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600' ?>">
-                            <?= $i ?>
-                        </a>
-                    <?php endfor; ?>
-
-                    <!-- Último -->
-                    <?php if ($fin < $totalPaginas): ?>
-                        <?php if ($fin < $totalPaginas - 1): ?><span class="px-2 text-slate-400">...</span><?php endif; ?>
-                        <a href="<?= $buildUrl($totalPaginas) ?>" class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-500 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-medium"><?= $totalPaginas ?></a>
-                    <?php endif; ?>
-
-                    <!-- Next -->
-                    <a href="<?= $buildUrl(min($totalPaginas, $paginaActual + 1)) ?>" 
-                       class="p-2 rounded-lg border border-slate-200 dark:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors <?= $paginaActual >= $totalPaginas ? 'pointer-events-none opacity-50' : '' ?>">
-                        <?= Icons::get('chevron-right', 'w-4 h-4 text-slate-600 dark:text-slate-300') ?>
-                    </a>
-                </div>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Editar (Solo estructura básica, lógica JS manejará la apertura) -->
-<div id="modal-editar-proveedor" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <!-- Backdrop -->
-    <!-- Backdrop -->
-    <div class="fixed inset-0 bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-sm transition-opacity opacity-0" id="modal-backdrop"></div>
-
-    <!-- Panel -->
-    <div class="fixed inset-0 z-10 overflow-y-auto" onclick="if(event.target === this) toggleModal(false)">
-        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <div class="relative transform overflow-hidden rounded-2xl bg-white dark:bg-slate-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" id="modal-panel">
-                
-                <div class="bg-white dark:bg-slate-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 sm:mx-0 sm:h-10 sm:w-10">
-                            <?= Icons::get('edit', 'w-6 h-6 text-amber-600 dark:text-amber-400') ?>
+            <?php
+            // Preparar contenido de las filas
+            ob_start();
+            foreach ($proveedores as $p): ?>
+                <tr class="group hover:bg-slate-50 dark:hover:bg-slate-600/30 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xs">
+                                <?= strtoupper(substr($p['nombre'], 0, 2)) ?>
+                            </div>
+                            <span class="font-medium text-slate-800 dark:text-white"><?= htmlspecialchars($p['nombre']) ?></span>
                         </div>
-                        <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
-                            <h3 class="text-base font-semibold leading-6 text-slate-900 dark:text-white" id="modal-title">Editar Proveedor</h3>
-                            
-                            <form id="form-editar-proveedor" class="mt-4 space-y-4">
-                                <input type="hidden" id="editar-prov-id" name="editar-prov-id">
-                                
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre</label>
-                                    <input type="text" id="editar-prov-nombre" name="editar-prov-nombre" required 
-                                           class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-600 border-0 rounded-lg text-slate-800 dark:text-white focus:ring-2 focus:ring-amber-500/30">
+                    </td>
+                    <td class="px-6 py-4 text-slate-600 dark:text-slate-300">
+                        <?= htmlspecialchars($p['contacto']) ?>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex flex-col gap-1">
+                            <?php if (!empty($p['telefono'])): ?>
+                                <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                    <?= Icons::get('phone', 'w-3 h-3') ?>
+                                    <?= htmlspecialchars($p['telefono']) ?>
                                 </div>
-                                
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Contacto</label>
-                                    <input type="text" id="editar-prov-contacto" name="editar-prov-contacto" 
-                                           class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-600 border-0 rounded-lg text-slate-800 dark:text-white focus:ring-2 focus:ring-amber-500/30">
+                            <?php endif; ?>
+                            <?php if (!empty($p['email'])): ?>
+                                <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                    <?= Icons::get('mail', 'w-3 h-3') ?>
+                                    <?= htmlspecialchars($p['email']) ?>
                                 </div>
-                                
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Teléfono</label>
-                                        <input type="text" id="editar-prov-telefono" name="editar-prov-telefono" 
-                                               class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-600 border-0 rounded-lg text-slate-800 dark:text-white focus:ring-2 focus:ring-amber-500/30">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
-                                        <input type="email" id="editar-prov-email" name="editar-prov-email" 
-                                               class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-600 border-0 rounded-lg text-slate-800 dark:text-white focus:ring-2 focus:ring-amber-500/30">
-                                    </div>
-                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick='editarProveedor(<?= json_encode($p) ?>)' class="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-colors" title="Editar">
+                                <?= Icons::get('edit', 'w-4 h-4') ?>
+                            </button>
+                            <form id="form-eliminar-<?= $p['id'] ?>" action="index.php?controlador=proveedor&accion=eliminar" method="POST" class="inline">
+                                <input type="hidden" name="id" value="<?= $p['id'] ?>">
+                                <button type="button" onclick="confirmarEliminar(<?= $p['id'] ?>)" class="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Eliminar">
+                                    <?= Icons::get('trash', 'w-4 h-4') ?>
+                                </button>
                             </form>
                         </div>
-                    </div>
-                </div>
-                <div class="bg-gray-50 dark:bg-slate-700/50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                    <button type="submit" form="form-editar-proveedor" class="inline-flex w-full justify-center rounded-xl bg-amber-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-500 sm:ml-3 sm:w-auto transition-colors">
-                        Guardar Cambios
-                    </button>
-                    <button type="button" id="cancelar-modal-proveedor" class="mt-3 inline-flex w-full justify-center rounded-xl bg-white dark:bg-slate-600 px-3 py-2 text-sm font-semibold text-slate-900 dark:text-white shadow-sm ring-1 ring-inset ring-slate-300 dark:ring-slate-500 hover:bg-slate-50 dark:hover:bg-slate-500 sm:mt-0 sm:w-auto transition-colors">
-                        Cancelar
-                    </button>
-                </div>
-            </div>
+                    </td>
+                </tr>
+            <?php endforeach; 
+            $tableContent = ob_get_clean();
+
+            echo View::component('table', [
+                'headers' => [
+                    ['label' => 'Empresa', 'align' => 'left'],
+                    ['label' => 'Contacto', 'align' => 'left'],
+                    ['label' => 'Info Contacto', 'align' => 'left'],
+                    ['label' => 'Acciones', 'align' => 'center', 'class' => 'w-24']
+                ],
+                'content' => View::raw($tableContent),
+                'empty' => empty($proveedores),
+                'emptyMsg' => 'No hay proveedores registrados',
+                'emptyIcon' => 'suppliers',
+                'pagination' => [
+                    'current' => $paginacion['current'] ?? 1,
+                    'total' => $paginacion['total'] ?? 1,
+                    'limit' => $paginacion['limit'] ?? 10,
+                    'url_builder' => $buildUrl,
+                    'limit_name' => 'limit'
+                ]
+            ]);
+            ?>
         </div>
     </div>
 </div>
+<?php require_once __DIR__ . '/modal_crear.php'; ?>
+
+<!-- Modal Editar -->
+<?php
+echo View::component('modal', [
+    'id' => 'modal-editar-proveedor',
+    'title' => 'Editar Proveedor',
+    'size' => 'lg',
+    'content' => '
+        <form id="form-editar-proveedor" class="space-y-4">
+            <input type="hidden" id="editar-prov-id" name="editar-prov-id">
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre</label>
+                <input type="text" id="editar-prov-nombre" name="editar-prov-nombre" required 
+                       class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-600 border-0 rounded-lg text-slate-800 dark:text-white focus:ring-2 focus:ring-amber-500/30">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Contacto</label>
+                <input type="text" id="editar-prov-contacto" name="editar-prov-contacto" 
+                       class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-600 border-0 rounded-lg text-slate-800 dark:text-white focus:ring-2 focus:ring-amber-500/30">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Teléfono</label>
+                    <input type="text" id="editar-prov-telefono" name="editar-prov-telefono" 
+                           class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-600 border-0 rounded-lg text-slate-800 dark:text-white focus:ring-2 focus:ring-amber-500/30">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
+                    <input type="email" id="editar-prov-email" name="editar-prov-email" 
+                           class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-600 border-0 rounded-lg text-slate-800 dark:text-white focus:ring-2 focus:ring-amber-500/30">
+                </div>
+            </div>
+        </form>
+    ',
+    'footer' => '
+        <div class="flex gap-3 w-full sm:justify-end">
+            ' . View::component('button', [
+                'label' => 'Cancelar',
+                'variant' => 'outline',
+                'attributes' => 'type="button" onclick="closeModal(\'modal-editar-proveedor\')"',
+                'class' => 'flex-1 sm:flex-none'
+            ]) . '
+            ' . View::component('button', [
+                'label' => 'Guardar Cambios',
+                'variant' => 'primary',
+                'attributes' => 'form="form-editar-proveedor" type="submit"',
+                'class' => 'flex-1 sm:flex-none bg-amber-600 hover:bg-amber-700 shadow-amber-500/30'
+            ]) . '
+        </div>
+    '
+]);
+?>
 
 <!-- Módulo de Proveedores (cargado desde archivo externo) -->
 <script src="<?= BASE_URL ?>js/pages/proveedores.js?v=<?= time() ?>"></script>

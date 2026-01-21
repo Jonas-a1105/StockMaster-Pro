@@ -1,33 +1,37 @@
-<?php
 namespace App\Controllers;
 
-use App\Core\Database;
-use App\Core\Session;
+use App\Core\BaseController;
+use App\Models\AuditModel;
 
-class AuditController {
+use App\Domain\Enums\Capability;
+
+class AuditController extends BaseController {
+    private $auditModel;
 
     public function __construct() {
-        if ($_SESSION['user_plan'] === 'free') {
-            redirect('index.php?controlador=premium');
-        }
+        parent::__construct();
+        $this->requireCapability(Capability::VIEW_REPORTS);
+        $this->auditModel = new AuditModel();
     }
 
     public function index() {
-        $db = Database::conectar();
-        $userId = $_SESSION['user_id'];
-        
-        // Obtener logs del usuario
-        $query = "SELECT * FROM audit_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT 50";
-        $stmt = $db->prepare($query);
-        $stmt->execute([$userId]);
-        $logs = $stmt->fetchAll();
+        // Obtenemos filtros de la request
+        $filtros = [
+            'entity_type' => $this->request->query('entity_type'),
+            'action' => $this->request->query('action'),
+            'fecha_inicio' => $this->request->query('fecha_inicio'),
+            'fecha_fin' => $this->request->query('fecha_fin'),
+            'busqueda' => $this->request->query('busqueda')
+        ];
 
-        $this->render('audit/index', ['logs' => $logs]);
-    }
+        // Usar helper de paginación del BaseController
+        // Nota: AuditModel->obtenerHistorial necesita ser adaptado para paginación estándar si se desea, 
+        // pero por ahora mantendremos el límite fijo o lo pasaremos desde pagData.
+        $logs = $this->auditModel->obtenerHistorial($this->userId, array_merge($filtros, ['limit' => 50]));
 
-    private function render($vista, $data = []) {
-        extract($data);
-        $vistaContenido = __DIR__ . '/../../views/' . $vista . '.php';
-        require __DIR__ . '/../../views/layouts/main.php';
+        return $this->response->view('audit/index', [
+            'logs' => $logs,
+            'filtros' => $filtros
+        ]);
     }
 }

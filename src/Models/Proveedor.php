@@ -1,63 +1,36 @@
 <?php
 namespace App\Models;
 
+use App\Core\BaseModel;
 use App\Core\Database;
 use \PDO;
 
-class Proveedor {
-    
-    private $db;
+class Proveedor extends BaseModel {
+    protected $table = 'proveedores';
+    protected $fillable = ['user_id', 'nombre', 'contacto', 'telefono', 'email', 'created_at', 'updated_at'];
+    protected $timestamps = true;
 
     public function __construct() {
-        $this->db = Database::conectar();
+        parent::__construct();
     }
 
     public function obtenerTodos($userId, $limit = null, $offset = 0, $busqueda = '') {
-        $sql = "SELECT * FROM proveedores WHERE user_id = ?";
-        $params = [$userId];
-
-        if (!empty($busqueda)) {
-            $sql .= " AND (nombre LIKE ? OR contacto LIKE ? OR email LIKE ?)";
-            $term = "%{$busqueda}%";
-            $params[] = $term;
-            $params[] = $term;
-            $params[] = $term;
-        }
-
-        $sql .= " ORDER BY nombre ASC";
+        $query = $this->buscarStandard($userId, ['nombre', 'contacto', 'email'], $busqueda, false)
+            ->orderBy('nombre', 'ASC');
 
         if ($limit !== null) {
-            // Cast to int for safety and embed directly to avoid PDO string binding issues with LIMIT
-            $sql .= " LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+            $query->limit($limit)->offset($offset);
         }
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
+        return $query->get();
     }
 
     public function contarTodos($userId, $busqueda = '') {
-        $sql = "SELECT COUNT(*) as total FROM proveedores WHERE user_id = ?";
-        $params = [$userId];
-
-        if (!empty($busqueda)) {
-            $sql .= " AND (nombre LIKE ? OR contacto LIKE ? OR email LIKE ?)";
-            $term = "%{$busqueda}%";
-            $params[] = $term;
-            $params[] = $term;
-            $params[] = $term;
-        }
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetch()['total'];
+        return $this->buscarStandard($userId, ['nombre', 'contacto', 'email'], $busqueda, false)->count();
     }
 
     public function obtenerPorId($userId, $id) {
-        $query = "SELECT * FROM proveedores WHERE id = ? AND user_id = ?";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$id, $userId]);
-        return $stmt->fetch();
+        return $this->query()->where('id', $id)->where('user_id', $userId)->first();
     }
 
     /**
@@ -67,10 +40,10 @@ class Proveedor {
      * @return array|false Datos del proveedor o false si no existe
      */
     public function obtenerPorNombre($userId, $nombre) {
-        $query = "SELECT * FROM proveedores WHERE user_id = ? AND LOWER(nombre) = LOWER(?)";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$userId, $nombre]);
-        return $stmt->fetch();
+        return $this->query()
+            ->where('user_id', $userId)
+            ->whereRaw("LOWER(nombre) = LOWER(?)", [$nombre])
+            ->first();
     }
 
     /**
@@ -82,15 +55,19 @@ class Proveedor {
      * @param string|null $email
      * @return int|false ID del proveedor creado o false si falla
      */
-    public function crear($userId, $nombre, $contacto, $telefono, $email) {
-        $query = "INSERT INTO proveedores (user_id, nombre, contacto, telefono, email) 
-                  VALUES (?, ?, ?, ?, ?)";
-        $stmt = $this->db->prepare($query);
-        
-        if ($stmt->execute([$userId, $nombre, $contacto, $telefono, $email])) {
-            return $this->db->lastInsertId(); // Devuelve el ID del proveedor recién creado
+    public function crear($data) {
+        if (!is_array($data)) {
+            // Fallback for old positional calls if any
+            $args = func_get_args();
+            $data = [
+                'user_id' => $args[0],
+                'nombre' => $args[1] ?? '',
+                'contacto' => $args[2] ?? null,
+                'telefono' => $args[3] ?? null,
+                'email' => $args[4] ?? null,
+            ];
         }
-        return false;
+        return $this->create($data);
     }
 
     /**
@@ -117,20 +94,23 @@ class Proveedor {
         }
         
         // No existe, crear nuevo y devolver su ID
-        return $this->crear($userId, $nombre, $contacto, $telefono, $email);
+        return $this->crear([
+            'user_id' => $userId,
+            'nombre' => $nombre,
+            'contacto' => $contacto,
+            'telefono' => $telefono,
+            'email' => $email
+        ]);
     }
 
-    public function actualizar($userId, $id, $nombre, $contacto, $telefono, $email) {
-        $query = "UPDATE proveedores 
-                  SET nombre = ?, contacto = ?, telefono = ?, email = ?
-                  WHERE id = ? AND user_id = ?";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([$nombre, $contacto, $telefono, $email, $id, $userId]);
+    public function actualizar($id, $data) {
+        return parent::update($id, $data) > 0;
     }
 
     public function eliminar($userId, $id) {
-        $query = "DELETE FROM proveedores WHERE id = ? AND user_id = ?";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([$id, $userId]);
+        return $this->query()
+            ->where('id', $id)
+            ->where('user_id', $userId)
+            ->delete() > 0;
     }
 }

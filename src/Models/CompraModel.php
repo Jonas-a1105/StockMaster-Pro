@@ -1,104 +1,115 @@
 <?php
 namespace App\Models;
 
+use App\Core\BaseModel;
 use App\Core\Database;
+use App\Core\QueryBuilder;
+use App\Domain\Enums\PaymentStatus;
 use \PDO;
 
-class CompraModel {
-    private $db;
+class CompraModel extends BaseModel {
+    protected $table = 'compras';
+    protected $fillable = [
+        'user_id', 'proveedor_id', 'nro_factura', 'total_usd', 
+        'estado', 'fecha_emision', 'fecha_vencimiento', 
+        'created_at', 'updated_at'
+    ];
+    protected $timestamps = true;
 
     public function __construct() {
-        $this->db = Database::conectar();
+        parent::__construct();
     }
 
     // Registrar una nueva compra
     public function crearCompra($userId, $proveedorId, $nroFactura, $total, $estado, $fechaEmision, $fechaVencimiento) {
-        $query = "INSERT INTO compras (user_id, proveedor_id, nro_factura, total_usd, estado, fecha_emision, fecha_vencimiento) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$userId, $proveedorId, $nroFactura, $total, $estado, $fechaEmision, $fechaVencimiento]);
-        return $this->db->lastInsertId();
+        return $this->create([
+            'user_id' => $userId,
+            'proveedor_id' => $proveedorId,
+            'nro_factura' => $nroFactura,
+            'total_usd' => $total,
+            'estado' => $estado,
+            'fecha_emision' => $fechaEmision,
+            'fecha_vencimiento' => $fechaVencimiento
+        ]);
     }
 
     public function crearCompraItem($compraId, $productoId, $cantidad, $precioUnitario) {
-        $query = "INSERT INTO compra_items (compra_id, producto_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([$compraId, $productoId, $cantidad, $precioUnitario]);
+        return QueryBuilder::table('compra_items')->insert([
+            'compra_id' => $compraId,
+            'producto_id' => $productoId,
+            'cantidad' => $cantidad,
+            'precio_unitario' => $precioUnitario
+        ]);
     }
 
     // Actualizar el precio de costo de este proveedor específico
     public function actualizarPrecioProveedor($productoId, $proveedorId, $precioCosto) {
-        // "INSERT ... ON DUPLICATE KEY UPDATE" (Upsert)
-        $query = "INSERT INTO producto_proveedores (producto_id, proveedor_id, ultimo_precio_costo) 
-                  VALUES (?, ?, ?) 
-                  ON DUPLICATE KEY UPDATE ultimo_precio_costo = ?";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([$productoId, $proveedorId, $precioCosto, $precioCosto]);
+        return QueryBuilder::table('producto_proveedores')->updateRaw(
+            "ultimo_precio_costo = ?",
+            [$precioCosto]
+        )->where('producto_id', $productoId)
+          ->where('proveedor_id', $proveedorId)
+          ->insertOrUpdate([
+              'producto_id' => $productoId,
+              'proveedor_id' => $proveedorId,
+              'ultimo_precio_costo' => $precioCosto
+          ]);
     }
 
     // Obtener reporte de compras (Filtrable por estado 'Pendiente')
     public function obtenerTodas($userId, $estado = '', $limit = 0, $offset = 0) {
-        $sql = "SELECT c.*, p.nombre as proveedor_nombre 
-                FROM compras c 
-                JOIN proveedores p ON c.proveedor_id = p.id 
-                WHERE c.user_id = ?";
+        $query = $this->query()
+            ->from('compras c')
+            ->where('c.user_id', $userId)
+            ->select(['c.*'])
+            ->selectRaw('p.nombre as proveedor_nombre')
+            ->join('proveedores p', 'c.proveedor_id', '=', 'p.id');
         
-        $params = [$userId];
         if (!empty($estado)) {
-            $sql .= " AND c.estado = ?";
-            $params[] = $estado;
+            $query->where('c.estado', $estado);
         }
         
-        $sql .= " ORDER BY c.id DESC";
+        $query->orderBy('c.id', 'DESC');
         
         if ($limit > 0) {
-            $sql .= " LIMIT " . (int)$limit;
-            if ($offset > 0) {
-                $sql .= " OFFSET " . (int)$offset;
-            }
+            $query->limit($limit)->offset($offset);
         }
         
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
+        return $query->get();
     }
 
     // Contar total de compras para paginación
     public function contarTodas($userId, $estado = '') {
-        $sql = "SELECT COUNT(*) FROM compras WHERE user_id = ?";
-        $params = [$userId];
+        $query = $this->scopeUser($userId);
         
         if (!empty($estado)) {
-            $sql .= " AND estado = ?";
-            $params[] = $estado;
+            $query->where('estado', $estado);
         }
         
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchColumn();
+        return $query->count();
     }
 
     // Obtener una compra específica
     public function obtenerPorId($userId, $compraId) {
-        $sql = "SELECT * FROM compras WHERE id = ? AND user_id = ?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$compraId, $userId]);
-        return $stmt->fetch();
+        return $this->query()
+            ->where('id', $compraId)
+            ->where('user_id', $userId)
+            ->first();
     }
 
     // Obtener los productos dentro de una compra
     public function obtenerItems($compraId) {
-        $sql = "SELECT ci.*, p.nombre as nombre_producto 
-                FROM compra_items ci
-                LEFT JOIN productos p ON ci.producto_id = p.id
-                WHERE ci.compra_id = ?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$compraId]);
-        return $stmt->fetchAll();
+        return QueryBuilder::table('compra_items')
+            ->select(['compra_items.*'])
+            ->selectRaw('productos.nombre as nombre_producto')
+            ->leftJoin('productos', 'compra_items.producto_id', '=', 'productos.id')
+            ->where('compra_items.compra_id', $compraId)
+            ->get();
     }
 
     public function pagarCompra($compraId) {
-        $stmt = $this->db->prepare("UPDATE compras SET estado = 'Pagada' WHERE id = ?");
-        return $stmt->execute([$compraId]);
+        return $this->query()
+            ->where('id', $compraId)
+            ->update(['estado' => PaymentStatus::PAGADA->value]) > 0;
     }
 }

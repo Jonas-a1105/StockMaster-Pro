@@ -1,22 +1,17 @@
 <?php
 namespace App\Controllers;
 
+use App\Core\BaseController;
 use App\Core\Session;
 
-class FreeController {
+class FreeController extends BaseController {
 
     /**
      * Muestra la página de bienvenida del plan gratuito
      */
     public function index() {
-        $this->render('free/index', [
-            'email' => $_SESSION['user_email'] ?? 'usuario'
+        return $this->response->view('free/index', [
+            'email' => Session::get('user_email', 'usuario')
         ]);
-    }
-
-    private function render($vista, $data = []) {
-        extract($data);
-        $vistaContenido = __DIR__ . '/../../views/' . $vista . '.php';
-        require __DIR__ . '/../../views/layouts/main.php';
     }
 }

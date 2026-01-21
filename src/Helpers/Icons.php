@@ -25,6 +25,16 @@ class Icons
         }
         
         $svg = $icons[$name];
+        
+        // Hacer los IDs únicos para evitar conflictos de gradientes/filtros
+        $uniqueId = substr(md5(uniqid($name, true)), 0, 8);
+        $svg = preg_replace_callback('/id="([^"]+)"/', function($matches) use ($uniqueId) {
+            return 'id="' . $matches[1] . '_' . $uniqueId . '"';
+        }, $svg);
+        $svg = preg_replace_callback('/url\(#([^)]+)\)/', function($matches) use ($uniqueId) {
+            return 'url(#' . $matches[1] . '_' . $uniqueId . ')';
+        }, $svg);
+
         // Insertar clases en el SVG
         return str_replace('<svg ', "<svg class=\"{$class}\" ", $svg);
     }
@@ -53,6 +63,35 @@ class Icons
     private static function getIcons(): array
     {
         return [
+            // === BRAND ===
+            'logo' => '<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="grad_stock_gen" x1="0" y1="64" x2="0" y2="0" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#D1FAE5"/>
+                        <stop offset="1" stop-color="#34D399"/>
+                    </linearGradient>
+                    <linearGradient id="grad_growth_gen" x1="10" y1="50" x2="54" y2="10" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#10B981"/>
+                        <stop offset="1" stop-color="#047857"/>
+                    </linearGradient>
+                    <filter id="shadow_gen" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#064E3B" flood-opacity="0.2"/>
+                    </filter>
+                </defs>
+                <rect x="12" y="38" width="10" height="7" rx="1" fill="url(#grad_stock_gen)" opacity="0.5"/>
+                <rect x="12" y="46" width="10" height="7" rx="1" fill="url(#grad_stock_gen)" opacity="0.6"/>
+                <rect x="26" y="30" width="10" height="7" rx="1" fill="url(#grad_stock_gen)" opacity="0.7"/>
+                <rect x="26" y="38" width="10" height="7" rx="1" fill="url(#grad_stock_gen)" opacity="0.8"/>
+                <rect x="26" y="46" width="10" height="7" rx="1" fill="url(#grad_stock_gen)" opacity="0.9"/>
+                <rect x="40" y="22" width="10" height="7" rx="1" fill="url(#grad_stock_gen)" />
+                <rect x="40" y="30" width="10" height="7" rx="1" fill="url(#grad_stock_gen)" />
+                <rect x="40" y="38" width="10" height="7" rx="1" fill="url(#grad_stock_gen)" />
+                <rect x="40" y="46" width="10" height="7" rx="1" fill="url(#grad_stock_gen)" />
+                <circle cx="10" cy="50" r="5" fill="#10B981" stroke="white" stroke-width="1.5" filter="url(#shadow_gen)" />
+                <path d="M10 47V53M7 50H13" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M10 50 C 18 50, 24 35, 34 38 C 42 40, 46 25, 54 12" stroke="url(#grad_growth_gen)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#shadow_gen)"/>
+                <path d="M54 12 C 54 12, 44 14, 42 22 C 42 22, 58 24, 60 14 C 60 14, 58 8, 54 12 Z" fill="#10B981" stroke="white" stroke-width="1" filter="url(#shadow_gen)"/>
+            </svg>',
             // === NAVEGACIÓN ===
             'dashboard' => '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
@@ -180,6 +219,10 @@ class Icons
             
             'user-circle' => '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>',
+
+            'user-plus' => '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
             </svg>',
 
             'user-cog' => '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor">

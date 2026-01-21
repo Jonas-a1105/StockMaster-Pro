@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS `productos` (
   KEY `proveedor_id` (`proveedor_id`),
   KEY `idx_busqueda_nombre` (`nombre`),
   KEY `idx_tiene_iva` (`tiene_iva`),
+  FULLTEXT KEY `idx_fulltext_search` (`nombre`, `categoria`),
   CONSTRAINT `fk_producto_proveedor` FOREIGN KEY (`proveedor_id`) REFERENCES `proveedores` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

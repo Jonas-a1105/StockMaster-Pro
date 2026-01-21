@@ -1,142 +1,135 @@
 <?php
 namespace App\Controllers;
 
+use App\Core\BaseController;
 use App\Models\Proveedor;
-use App\Core\Session; // <-- ¡AÑADIR ESTE!
+use App\Services\ProveedorService;
+use App\Core\Session;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\ValidationException;
+use App\Exceptions\AppException;
 
-class ProveedorController {
+use App\Domain\Enums\Capability;
+
+class ProveedorController extends BaseController {
+    private $proveedorService;
+    private $proveedorModel;
+
+    public function __construct() {
+        parent::__construct();
+        $this->requireCapability(Capability::ADVANCED_INVENTORY, 'Acceso denegado. Esta es una función Premium.');
+
+        $this->proveedorModel = new Proveedor();
+        $this->proveedorService = new ProveedorService();
+    }
 
     public function index() {
-        // Chequeo de plan
-        if (($_SESSION['user_plan'] ?? 'free') === 'free') {
-            Session::flash('error', 'Acceso denegado. Esta es una función Premium.');
-            redirect('index.php?controlador=dashboard');
-        }
+        $busqueda = trim($this->request->query('busqueda', ''));
         
-        $userId = $_SESSION['user_id'];
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $busqueda = isset($_GET['busqueda']) ? trim($_GET['busqueda']) : '';
+        // Usar helper de paginación del BaseController
+        $total = $this->proveedorModel->contarTodos($this->userId, $busqueda);
+        $pagData = $this->getPaginationData($total, 10, 'prov_per_page');
         
-        // Dynamic Limit
-        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
-        $allowedLimits = [5, 10, 25, 50, 100];
-        if (!in_array($limit, $allowedLimits)) {
-            $limit = 10;
-        }
+        $proveedores = $this->proveedorModel->obtenerTodos(
+            $this->userId, 
+            $pagData['limit'], 
+            $pagData['offset'], 
+            $busqueda
+        );
 
-        $offset = ($page - 1) * $limit;
-
-        $proveedorModel = new Proveedor();
-        
-        $proveedores = $proveedorModel->obtenerTodos($userId, $limit, $offset, $busqueda);
-        $total = $proveedorModel->contarTodos($userId, $busqueda);
-        $totalPaginas = ceil($total / $limit);
-
-        $this->render('proveedores/index', [
+        return $this->response->view('proveedores/index', [
             'proveedores' => $proveedores,
             'paginacion' => [
-                'current' => $page,
-                'total' => $totalPaginas,
-                'limit' => $limit,
+                'current' => $pagData['page'],
+                'total' => $pagData['totalPages'],
+                'limit' => $pagData['limit'],
                 'total_registros' => $total,
                 'busqueda' => $busqueda
             ]
         ]);
     }
 
-    // --- ¡REVERTIDO A PÁGINA COMPLETA! ---
-    // 'crear' vuelve a ser una acción de página completa
     public function crear() {
-        $userId = $_SESSION['user_id'];
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $nombre = trim($_POST['prov-nombre'] ?? '');
-            $contacto = trim($_POST['prov-contacto'] ?? '');
-            $telefono = trim($_POST['prov-telefono'] ?? '');
-            $email = trim($_POST['prov-email'] ?? '');
-
-            if (!empty($nombre)) {
-                $proveedorModel = new Proveedor();
-                $proveedorModel->crear($userId, $nombre, $contacto, $telefono, $email);
-                Session::flash('success', 'Proveedor agregado correctamente.');
-            } else {
-                Session::flash('error', 'El nombre del proveedor no puede estar vacío.');
-            }
+        if (!$this->request->isPost()) {
+             throw new AppException('Solicitud inválida.', 405);
         }
-        redirect('index.php?controlador=proveedor&accion=index');
+
+        $rules = [
+            'prov-nombre' => 'required|min:3',
+            'prov-email'  => 'email'
+        ];
+
+        if (!$this->request->validate($rules)) {
+            Session::flash('error', $this->request->firstError());
+            return $this->response->redirect('index.php?controlador=proveedor&accion=index');
+        }
+
+        $this->proveedorService->createProveedor($this->userId, [
+            'nombre'   => $this->request->input('prov-nombre'),
+            'contacto' => $this->request->input('prov-contacto'),
+            'telefono' => $this->request->input('prov-telefono'),
+            'email'    => $this->request->input('prov-email')
+        ]);
+        
+        Session::flash('success', 'Proveedor agregado correctamente.');
+        return $this->response->redirect('index.php?controlador=proveedor&accion=index');
     }
 
-    // --- ¡NUEVA ACCIÓN! ---
-    // API para el modal de "Editar"
     public function apiObtener() {
-        header('Content-Type: application/json');
-        $userId = $_SESSION['user_id'];
-        $id = (int)($_GET['id'] ?? 0);
+        $id = $this->request->query('id', 0, 'int');
         
         if ($id === 0) {
-            echo json_encode(['error' => 'ID no válido']);
-            exit;
+            throw new AppException('ID de proveedor no válido', 400);
         }
 
-        $proveedorModel = new Proveedor();
-        $proveedor = $proveedorModel->obtenerPorId($userId, $id);
-
+        $proveedor = $this->proveedorModel->obtenerPorId($this->userId, $id);
         if ($proveedor) {
-            echo json_encode($proveedor);
-        } else {
-            echo json_encode(['error' => 'Proveedor no encontrado']);
+            return $this->response->json($proveedor);
         }
-        exit;
+        
+        throw new NotFoundException('Proveedor no encontrado');
     }
 
-    // --- ¡ACCIÓN MODIFICADA! ---
-    // Responde al modal de "Editar"
     public function actualizar() {
-        $userId = $_SESSION['user_id'];
+        if (!$this->request->isPost()) {
+             throw new AppException('Solicitud inválida.', 405);
+        }
+
+        $rules = [
+            'editar-prov-id'     => 'required|numeric',
+            'editar-prov-nombre' => 'required|min:3',
+            'editar-prov-email'  => 'email'
+        ];
+
+        if (!$this->request->validate($rules)) {
+            throw new ValidationException(['form' => $this->request->firstError()], 'Error al actualizar proveedor.');
+        }
+
+        $data = [
+            'id'       => $this->request->input('editar-prov-id'),
+            'nombre'   => $this->request->input('editar-prov-nombre'),
+            'contacto' => $this->request->input('editar-prov-contacto'),
+            'telefono' => $this->request->input('editar-prov-telefono'),
+            'email'    => $this->request->input('editar-prov-email')
+        ];
         
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = (int)($_POST['editar-prov-id'] ?? 0);
-            $nombre = trim($_POST['editar-prov-nombre'] ?? '');
-            $contacto = trim($_POST['editar-prov-contacto'] ?? '');
-            $telefono = trim($_POST['editar-prov-telefono'] ?? '');
-            $email = trim($_POST['editar-prov-email'] ?? '');
-
-            if ($id > 0 && !empty($nombre)) {
-                $proveedorModel = new Proveedor();
-                $proveedorModel->actualizar($userId, $id, $nombre, $contacto, $telefono, $email);
-
-                $respuesta = [
-                    'success' => true,
-                    'proveedor' => ['id' => $id, 'nombre' => $nombre, 'contacto' => $contacto, 'telefono' => $telefono, 'email' => $email]
-                ];
-                header('Content-Type: application/json');
-                echo json_encode($respuesta);
-                exit;
-            }
+        if ($this->proveedorService->updateProveedor($this->userId, $data)) {
+            return $this->response->json(['success' => true, 'proveedor' => $data]);
         }
         
-        header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Error en los datos']);
-        exit;
+        throw new AppException('Error al actualizar el proveedor.', 500);
     }
 
     public function eliminar() {
-        $userId = $_SESSION['user_id'];
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = (int)($_POST['id'] ?? 0);
-            if ($id > 0) {
-                $proveedorModel = new Proveedor();
-                $proveedorModel->eliminar($userId, $id);
-                Session::flash('success', 'Proveedor eliminado.');
-            }
+        if (!$this->request->isPost()) {
+            return $this->response->redirect('index.php?controlador=proveedor&accion=index');
         }
-        redirect('index.php?controlador=proveedor&accion=index');
-    }
 
-    private function render($vista, $data = []) {
-        extract($data);
-        $vistaContenido = __DIR__ . '/../../views/' . $vista . '.php';
-        require __DIR__ . '/../../views/layouts/main.php';
+        $id = $this->request->input('id', 0, 'int');
+        if ($id > 0) {
+            $this->proveedorService->deleteProveedor($this->userId, $id);
+            Session::flash('success', 'Proveedor eliminado.');
+        }
+        return $this->response->redirect('index.php?controlador=proveedor&accion=index');
     }
 }

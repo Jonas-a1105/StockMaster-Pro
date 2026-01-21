@@ -10,12 +10,9 @@ console.log('[Clientes] Módulo cargando...');
 // MODAL - ABRIR
 // =========================================================================
 function abrirModalCliente(clienteData = null) {
-    const modal = document.getElementById('modal-cliente');
-    const backdrop = document.getElementById('modal-backdrop-cliente');
-    const panel = document.getElementById('modal-panel-cliente');
     const form = document.getElementById('form-cliente');
 
-    if (!modal || !form) return;
+    if (!form) return;
 
     // Reset Form
     form.reset();
@@ -38,30 +35,19 @@ function abrirModalCliente(clienteData = null) {
         document.getElementById('cliente_limite_credito').value = '0.00';
     }
 
-    // Show Modal
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        backdrop?.classList.remove('opacity-0');
-        panel?.classList.remove('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
-    }, 10);
+    // Use centralized modal function
+    if (typeof openModal === 'function') {
+        openModal('modal-cliente');
+    }
 }
 
 // =========================================================================
 // MODAL - CERRAR
 // =========================================================================
 function cerrarModalCliente() {
-    const modal = document.getElementById('modal-cliente');
-    const backdrop = document.getElementById('modal-backdrop-cliente');
-    const panel = document.getElementById('modal-panel-cliente');
-
-    if (!modal) return;
-
-    backdrop?.classList.add('opacity-0');
-    panel?.classList.add('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
-
-    setTimeout(() => {
-        modal.classList.add('hidden');
-    }, 300);
+    if (typeof closeModal === 'function') {
+        closeModal('modal-cliente');
+    }
 }
 
 // =========================================================================
@@ -87,45 +73,52 @@ function guardarCliente(e) {
     `;
     btnSubmit.classList.add('flex', 'items-center', 'justify-center');
 
-    fetch('index.php?controlador=cliente&accion=' + accion, {
-        method: 'POST',
-        body: formData
-    })
-        .then(r => r.json())
+    API.postForm('index.php?controlador=cliente&accion=' + accion, formData)
         .then(data => {
-            if (data.success) {
-                if (typeof showToast === 'function') showToast(data.message, 'success');
+            if (typeof showToast === 'function') showToast(data.message || 'Operación exitosa', 'success');
 
-                // Check context (POS or Index)
-                if (document.getElementById('pos-buscador')) {
-                    // POS Context
-                    cerrarModalCliente();
-                    if (!clienteId && data.clienteId && window.seleccionarCliente) {
-                        window.seleccionarCliente({
-                            id: data.clienteId,
-                            nombre: formData.get('nombre'),
-                            documento: formData.get('numero_documento'),
-                            credito: formData.get('limite_credito')
-                        });
-                    }
-                } else {
-                    // Index Context - Reload to show changes
-                    setTimeout(() => window.location.reload(), 1000);
+            // Check context (POS or Index)
+            if (document.getElementById('pos-buscador')) {
+                // POS Context
+                cerrarModalCliente();
+                if (!clienteId && data.clienteId && window.seleccionarCliente) {
+                    window.seleccionarCliente({
+                        id: data.clienteId,
+                        nombre: formData.get('nombre'),
+                        documento: formData.get('numero_documento'),
+                        credito: formData.get('limite_credito')
+                    });
                 }
             } else {
-                if (typeof showToast === 'function') showToast('Error: ' + data.message, 'error');
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = originalContent;
-                btnSubmit.classList.remove('flex', 'items-center', 'justify-center');
+                // Index Context - Reload to show changes
+                setTimeout(() => window.location.reload(), 1000);
             }
         })
         .catch(err => {
             console.error(err);
             if (typeof showToast === 'function') showToast('Error de conexión', 'error');
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = originalContent;
-            btnSubmit.classList.remove('flex', 'items-center', 'justify-center');
+        })
+        .finally(() => {
+            if (btnSubmit) {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = originalContent;
+                btnSubmit.classList.remove('flex', 'items-center', 'justify-center');
+            }
         });
+}
+
+// =========================================================================
+// INICIALIZACIÓN
+// =========================================================================
+function inicializarClientes() {
+    console.log('[Clientes] Inicializando...');
+    const form = document.getElementById('form-cliente');
+    if (form) {
+        // Remover listener previo si existe (para TurboNav)
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        newForm.addEventListener('submit', guardarCliente);
+    }
 }
 
 // Bridge para editar desde index
@@ -138,6 +131,14 @@ function editarCliente(cliente) {
 // =========================================================================
 // EXPORTAR AL SCOPE GLOBAL
 // =========================================================================
+window.Clientes = {
+    init: inicializarClientes,
+    abrir: abrirModalCliente,
+    cerrar: cerrarModalCliente,
+    guardar: guardarCliente,
+    editar: editarCliente
+};
+window.inicializarClientes = inicializarClientes;
 window.abrirModalCliente = abrirModalCliente;
 window.cerrarModalCliente = cerrarModalCliente;
 window.guardarCliente = guardarCliente;

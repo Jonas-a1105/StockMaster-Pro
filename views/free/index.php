@@ -129,6 +129,7 @@ use App\Helpers\Icons;
                     <?php endif; ?>
 
                     <form id="form-license-activation" action="index.php?controlador=license&accion=activar" method="POST" class="space-y-4">
+                        <?= \App\Helpers\Security::csrfField() ?>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <?= Icons::get('lock', 'w-4 h-4 text-slate-400') ?>

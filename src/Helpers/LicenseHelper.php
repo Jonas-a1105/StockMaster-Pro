@@ -4,9 +4,7 @@ namespace App\Helpers;
 use App\Core\Database;
 
 class LicenseHelper {
-    // ⚠️ CRITICAL: This key MUST match the one used in the Generator Script.
-    // In production, this should be in an .env file.
-    private const SECRET_KEY = 'ENTERPRISE_SECRET_KEY_v2025_SECURE'; 
+    // La clave secreta ahora se obtiene desde el archivo .env (LICENSE_SECRET_KEY)
 
     /**
      * Valida y activa una licencia.
@@ -22,7 +20,8 @@ class LicenseHelper {
         [$payloadBase64, $signature] = $parts;
         
         // 1. Verificar Firma
-        $calculatedSignature = hash_hmac('sha256', $payloadBase64, self::SECRET_KEY);
+        $secretKey = getenv('LICENSE_SECRET_KEY') ?: 'ENTERPRISE_SECRET_KEY_v2025_SECURE';
+        $calculatedSignature = hash_hmac('sha256', $payloadBase64, $secretKey);
         
         if (!hash_equals($calculatedSignature, $signature)) {
             return ['success' => false, 'message' => 'Licencia inválida o alterada.'];

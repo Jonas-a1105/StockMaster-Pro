@@ -30,46 +30,10 @@ function setupDropdown(btnId, dropdownId, containerId) {
 }
 
 // =========================================================================
-// TOAST NOTIFICATIONS
+// TOAST NOTIFICATIONS (Delegated to notifications.js)
 // =========================================================================
-function showToast(message, type = 'success', duration = 4000) {
-    const container = document.getElementById('toast-container');
-    if (!container) {
-        console.warn('[Core] Toast container not found');
-        return;
-    }
-
-    const colors = {
-        success: 'bg-emerald-500',
-        error: 'bg-red-500',
-        warning: 'bg-amber-500',
-        info: 'bg-blue-500'
-    };
-
-    const toast = document.createElement('div');
-    toast.className = `${colors[type] || colors.info} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 slide-up`;
-    toast.innerHTML = `
-        <span class="flex-1 text-sm font-medium">${message}</span>
-        <button onclick="this.parentElement.remove()" class="text-white/80 hover:text-white">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-        </button>
-    `;
-
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100%)';
-        setTimeout(() => toast.remove(), 300);
-    }, duration);
-}
-
-// Alias para compatibilidad
-function mostrarNotificacion(msg, type) {
-    showToast(msg, type === 'success' ? 'success' : (type === 'error' ? 'error' : 'warning'));
-}
+// Las notificaciones ahora se gestionan en public/js/core/notifications.js
+// para evitar duplicidad de código y centralizar los estilos premium.
 
 // =========================================================================
 // TEMA (Dark/Light Mode)
@@ -163,8 +127,7 @@ async function initFooterStats() {
     if (!footerInv) return;
 
     try {
-        const res = await fetch('index.php?controlador=dashboard&accion=apiFooterStats');
-        const data = await res.json();
+        const data = await Endpoints.footerStats();
 
         if (data.valor_inventario_usd !== undefined) {
             const valor = parseFloat(data.valor_inventario_usd);

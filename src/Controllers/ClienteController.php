@@ -1,222 +1,145 @@
 <?php
 namespace App\Controllers;
 
+use App\Core\BaseController;
 use App\Core\Session;
 use App\Models\Cliente;
+use App\Services\ClienteService;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\ValidationException;
+use App\Exceptions\AppException;
 
-class ClienteController {
+use App\Domain\Enums\Capability;
 
+class ClienteController extends BaseController {
     private $clienteModel;
+    private $clienteService;
 
     public function __construct() {
-        if (!isset($_SESSION['user_plan']) || $_SESSION['user_plan'] === 'free') {
-            Session::flash('error', 'El Módulo de Clientes es Premium.');
-            redirect('index.php?controlador=dashboard');
-        }
+        parent::__construct();
+        $this->requireCapability(Capability::ADVANCED_INVENTORY, 'El Módulo de Clientes es Premium.');
+        
         $this->clienteModel = new Cliente();
+        $this->clienteService = new ClienteService();
     }
 
-    /**
-     * Mostrar listado de clientes
-     */
     public function index() {
-        $userId = $_SESSION['user_id'];
-        $busqueda = $_GET['buscar'] ?? '';
-        $clientes = $this->clienteModel->obtenerTodos($userId, $busqueda, true);
+        $busqueda = $this->request->query('buscar', '');
         
-        // Calcular deuda de cada cliente
+        // Paginación si fuera necesaria (aunque el original no la tenía, la dejamos preparada)
+        $clientes = $this->clienteModel->obtenerTodos($this->userId, $busqueda, true);
+        
         foreach ($clientes as &$cliente) {
             $cliente['deuda'] = $this->clienteModel->obtenerDeuda($cliente['id']);
         }
         
-        $this->render('clientes/index', ['clientes' => $clientes, 'busqueda' => $busqueda]);
+        return $this->response->view('clientes/index', [
+            'clientes' => $clientes, 
+            'busqueda' => $busqueda
+        ]);
     }
 
-    /**
-     * Ver detalle de un cliente
-     */
     public function ver() {
-        $userId = $_SESSION['user_id'];
-        $clienteId = (int)($_GET['id'] ?? 0);
-        
-        $cliente = $this->clienteModel->obtenerPorId($userId, $clienteId);
+        $clienteId = $this->request->query('id', 0, 'int');
+        $cliente = $this->clienteModel->obtenerPorId($this->userId, $clienteId);
         
         if (!$cliente) {
-            Session::flash('error', 'Cliente no encontrado.');
-            redirect('index.php?controlador=cliente&accion=index');
+            throw new NotFoundException('Cliente no encontrado.');
         }
         
         $stats = $this->clienteModel->obtenerEstadisticas($clienteId);
         $historial = $this->clienteModel->obtenerHistorialCompras($clienteId, 20);
         
-        $this->render('clientes/ver', [
+        return $this->response->view('clientes/ver', [
             'cliente' => $cliente,
             'stats' => $stats,
             'historial' => $historial
         ]);
     }
 
-    /**
-     * Guardar nuevo cliente (AJAX)
-     */
     public function guardar() {
-        header('Content-Type: application/json');
-        $userId = $_SESSION['user_id'];
-        
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo json_encode(['success' => false, 'message' => 'Método no permitido.']);
-            exit;
+        if (!$this->request->isPost()) {
+             throw new AppException('Solicitud inválida.', 405);
         }
 
-        $nombre = trim($_POST['nombre']);
-        $tipoDocumento = $_POST['tipo_documento'];
-        $numeroDocumento = trim($_POST['numero_documento'] ?? '');
-        $telefono = trim($_POST['telefono'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $direccion = trim($_POST['direccion'] ?? '');
-        $tipoCliente = $_POST['tipo_cliente'];
-        $limiteCredito = (float)($_POST['limite_credito'] ?? 0);
+        $rules = [
+            'nombre' => 'required|min:3',
+            'email'  => 'email',
+            'numero_documento' => 'required'
+        ];
 
-        if (empty($nombre)) {
-            echo json_encode(['success' => false, 'message' => 'El nombre es obligatorio.']);
-            exit;
+        if (!$this->request->validate($rules)) {
+            throw new ValidationException(['form' => $this->request->firstError()], 'Error al crear cliente.');
         }
 
-        $clienteId = $this->clienteModel->crear(
-            $userId, 
-            $nombre, 
-            $tipoDocumento, 
-            $numeroDocumento, 
-            $telefono, 
-            $email, 
-            $direccion, 
-            $tipoCliente, 
-            $limiteCredito
-        );
-
-        if ($clienteId) {
-            echo json_encode(['success' => true, 'message' => 'Cliente creado exitosamente.', 'clienteId' => $clienteId]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Error al crear el cliente.']);
-        }
-        exit;
+        $clienteId = $this->clienteService->createCliente($this->userId, $this->request->all());
+        return $this->response->json([
+            'success' => true, 
+            'message' => 'Cliente creado exitosamente.', 
+            'clienteId' => $clienteId
+        ]);
     }
 
-    /**
-     * Actualizar cliente existente (AJAX)
-     */
     public function actualizar() {
-        header('Content-Type: application/json');
-        $userId = $_SESSION['user_id'];
+        if (!$this->request->isPost()) {
+             throw new AppException('Solicitud inválida.', 405);
+        }
+
+        $rules = [
+            'id'     => 'required|numeric',
+            'nombre' => 'required|min:3',
+            'email'  => 'email'
+        ];
+
+        if (!$this->request->validate($rules)) {
+            throw new ValidationException(['form' => $this->request->firstError()], 'Error al actualizar cliente.');
+        }
+
+        if ($this->clienteService->updateCliente($this->userId, $this->request->all())) {
+            return $this->response->json(['success' => true, 'message' => 'Cliente actualizado exitosamente.']);
+        }
         
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo json_encode(['success' => false, 'message' => 'Método no permitido.']);
-            exit;
-        }
-
-        $id = (int)$_POST['id'];
-        $nombre = trim($_POST['nombre']);
-        $tipoDocumento = $_POST['tipo_documento'];
-        $numeroDocumento = trim($_POST['numero_documento'] ?? '');
-        $telefono = trim($_POST['telefono'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $direccion = trim($_POST['direccion'] ?? '');
-        $tipoCliente = $_POST['tipo_cliente'];
-        $limiteCredito = (float)($_POST['limite_credito'] ?? 0);
-
-        if (empty($nombre)) {
-            echo json_encode(['success' => false, 'message' => 'El nombre es obligatorio.']);
-            exit;
-        }
-
-        $exito = $this->clienteModel->actualizar(
-            $userId, 
-            $id, 
-            $nombre, 
-            $tipoDocumento, 
-            $numeroDocumento, 
-            $telefono, 
-            $email, 
-            $direccion, 
-            $tipoCliente, 
-            $limiteCredito
-        );
-
-        if ($exito) {
-            echo json_encode(['success' => true, 'message' => 'Cliente actualizado exitosamente.']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Error al actualizar el cliente.']);
-        }
-        exit;
+        throw new AppException('Error al actualizar el cliente.', 500);
     }
 
-    /**
-     * Desactivar un cliente (AJAX)
-     */
     public function desactivar() {
-        header('Content-Type: application/json');
-        $userId = $_SESSION['user_id'];
-        
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo json_encode(['success' => false, 'message' => 'Método no permitido.']);
-            exit;
+        if (!$this->request->isPost()) {
+             throw new AppException('Solicitud inválida.', 405);
         }
 
-        $id = (int)$_POST['id'];
-        $exito = $this->clienteModel->desactivar($userId, $id);
-
-        if ($exito) {
-            echo json_encode(['success' => true, 'message' => 'Cliente desactivado.']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Error al desactivar el cliente.']);
+        $id = $this->request->input('id', 0, 'int');
+        if ($this->clienteService->deactivateCliente($this->userId, $id)) {
+            return $this->response->json(['success' => true, 'message' => 'Cliente desactivado.']);
         }
-        exit;
+        throw new AppException('Error al desactivar el cliente.', 500);
     }
 
-    /**
-     * Pagar una venta pendiente de un cliente (acepta GET o POST)
-     */
     public function pagarVenta() {
-        $userId = $_SESSION['user_id'];
-        
-        // Aceptar tanto GET como POST
-        $ventaId = (int)($_GET['venta_id'] ?? $_POST['venta_id'] ?? 0);
-        $clienteId = (int)($_GET['cliente_id'] ?? $_POST['cliente_id'] ?? 0);
+        $ventaId = $this->request->input('venta_id', 0, 'int');
+        $clienteId = $this->request->input('cliente_id', 0, 'int');
         
         if ($ventaId <= 0) {
             Session::flash('error', 'Venta no válida.');
-            redirect('index.php?controlador=cliente&accion=index');
+            return $this->response->redirect('index.php?controlador=cliente&accion=index');
         }
         
-        // Usar VentaModel para marcar como pagada
-        $ventaModel = new \App\Models\VentaModel();
-        $exito = $ventaModel->marcarPagada($userId, $ventaId);
-        
-        if ($exito) {
+        $ventaService = new \App\Services\VentaService();
+        if ($ventaService->marcarComoPagada($this->userId, $ventaId)) {
             Session::flash('success', 'Venta #' . $ventaId . ' marcada como pagada.');
         } else {
-            Session::flash('error', 'Error al marcar la venta como pagada.');
+            Session::flash('error', 'No se pudo marcar como pagada.');
         }
         
-        // Redirigir de vuelta al cliente
         if ($clienteId > 0) {
-            redirect('index.php?controlador=cliente&accion=ver&id=' . $clienteId);
-        } else {
-            redirect('index.php?controlador=cliente&accion=index');
+            return $this->response->redirect('index.php?controlador=cliente&accion=ver&id=' . $clienteId);
         }
+        return $this->response->redirect('index.php?controlador=cliente&accion=index');
     }
 
-    /**
-     * Buscar clientes para POS (AJAX - autocomplete)
-     */
     public function buscarParaPOS() {
-        header('Content-Type: application/json');
-        $userId = $_SESSION['user_id'];
-        $termino = $_GET['term'] ?? '';
+        $termino = $this->request->query('term', '');
+        $clientes = $this->clienteModel->buscarParaPOS($this->userId, $termino);
         
-        $clientes = $this->clienteModel->buscarParaPOS($userId, $termino);
-        
-        // Formatear para autocompletar
         $resultado = [];
         foreach ($clientes as $c) {
             $resultado[] = [
@@ -229,14 +152,6 @@ class ClienteController {
                 'limite_credito' => $c['limite_credito']
             ];
         }
-        
-        echo json_encode($resultado);
-        exit;
-    }
-
-    private function render($vista, $data = []) {
-        extract($data);
-        $vistaContenido = __DIR__ . '/../../views/' . $vista . '.php';
-        require __DIR__ . '/../../views/layouts/main.php';
+        return $this->response->json($resultado);
     }
 }

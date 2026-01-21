@@ -1,72 +1,77 @@
 <?php
 namespace App\Controllers;
-
+ 
+use App\Core\BaseController;
 use App\Core\Database;
 use App\Core\Session;
-
-class RegistroController {
-
-    public function index() {
-        $this->render('registro/index');
+use App\Domain\Enums\UserPlan;
+use App\Domain\Enums\UserRole;
+use App\Models\UsuarioModel;
+ 
+class RegistroController extends BaseController {
+    private $usuarioModel;
+ 
+    public function __construct() {
+        parent::__construct();
+        $this->usuarioModel = new UsuarioModel();
     }
 
+    public function index() {
+        return $this->response->view('registro/index', [], 'auth');
+    }
+
+    /**
+     * Procesa el registro de un nuevo usuario
+     */
     public function guardar() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirect('index.php?controlador=registro');
+        if (!$this->request->isPost()) {
+            return $this->response->redirect('index.php?controlador=registro');
         }
 
-        $email = $_POST['email'] ?? '';
-        $username = $_POST['username'] ?? ''; // Nuevo campo
-        $password = $_POST['password'] ?? '';
-        $password_confirm = $_POST['password_confirm'] ?? '';
+        $email = $this->request->input('email', '');
+        $username = $this->request->input('username', '');
+        $password = $this->request->input('password', '');
+        $password_confirm = $this->request->input('password_confirm', '');
 
-        // Validar username
-        if (empty($username) || strlen($username) < 3) {
-             Session::flash('error', 'El nombre de usuario debe tener al menos 3 caracteres.');
-             redirect('index.php?controlador=registro');
+        // Validación
+        $rules = [
+            'username' => 'required|min:3|unique:usuarios,username',
+            'email'    => 'required|email|unique:usuarios,email',
+            'password' => 'required|min:6'
+        ];
+
+        $db = \App\Core\Database::conectar();
+        if (!$this->request->validate($rules, $db)) {
+            Session::flash('error', $this->request->firstError());
+            return $this->response->redirect('index.php?controlador=registro');
         }
 
-        if (empty($email) || empty($password) || $password !== $password_confirm || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            Session::flash('error', 'Datos de registro inválidos.');
-            redirect('index.php?controlador=registro');
+        if ($password !== $password_confirm) {
+            Session::flash('error', 'Las contraseñas no coinciden.');
+            return $this->response->redirect('index.php?controlador=registro');
         }
         
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-        $plan = 'free'; // Inicialmente en plan gratuito (inactivo)
         
-        $db = Database::conectar();
-        
-        // Verificar si el usuario ya existe
-        $stmtCheck = $db->prepare("SELECT id FROM usuarios WHERE username = ? OR email = ?");
-        $stmtCheck->execute([$username, $email]);
-        if ($stmtCheck->fetch()) {
-             Session::flash('error', 'El usuario o correo ya están registrados.');
-             redirect('index.php?controlador=registro');
-        }
-
-        // Sin periodo de prueba automático
-        $trial_ends_at = null;
-
         try {
-            // Explicitly set rol to 'usuario'
-            $stmt = $db->prepare("INSERT INTO usuarios (username, email, password, plan, trial_ends_at, rol) VALUES (?, ?, ?, ?, ?, 'usuario')");
-            $stmt->execute([$username, $email, $passwordHash, $plan, $trial_ends_at]);
+            $userData = [
+                'username' => $username,
+                'email' => $email,
+                'password' => $passwordHash,
+                'plan' => \App\Domain\Enums\UserPlan::FREE->value,
+                'role' => \App\Domain\Enums\UserRole::USUARIO->value,
+                'trial_ends_at' => null
+            ];
+
+            $this->usuarioModel->create($userData);
             
             Session::flash('success', '¡Te has registrado con éxito! Por favor, inicia sesión.');
-            redirect('index.php?controlador=login');
+            return $this->response->redirect('index.php?controlador=login');
 
-        } catch (\PDOException $e) {
-            if ($e->getCode() == 23000) {
-                Session::flash('error', 'El email ya está registrado.');
-            } else {
-                Session::flash('error', 'Ocurrió un error en el registro.');
-            }
-            redirect('index.php?controlador=registro');
+        } catch (\Exception $e) {
+            error_log("REGISTRO ERROR: " . $e->getMessage());
+            Session::flash('error', 'Ocurrió un error en el registro. Es posible que el correo ya esté en uso.');
+            return $this->response->redirect('index.php?controlador=registro');
         }
-    }
-
-    private function render($vista, $data = []) {
-        extract($data);
-        require __DIR__ . '/../../views/' . $vista . '.php';
     }
 }

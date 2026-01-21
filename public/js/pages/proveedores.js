@@ -10,24 +10,14 @@ console.log('[Proveedores] Módulo cargando...');
 // MODAL DE EDICIÓN
 // =========================================================================
 function toggleModal(show) {
-    const modal = document.getElementById('modal-editar-proveedor');
-    const backdrop = document.getElementById('modal-backdrop');
-    const panel = document.getElementById('modal-panel');
-
-    if (!modal || !backdrop || !panel) return;
-
     if (show) {
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            backdrop.classList.remove('opacity-0');
-            panel.classList.remove('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
-        }, 10);
+        if (typeof openModal === 'function') {
+            openModal('modal-editar-proveedor');
+        }
     } else {
-        backdrop.classList.add('opacity-0');
-        panel.classList.add('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-        }, 300);
+        if (typeof closeModal === 'function') {
+            closeModal('modal-editar-proveedor');
+        }
     }
 }
 
@@ -89,12 +79,10 @@ function initProveedores() {
 
             const formData = new FormData(e.target);
 
-            await fetch('index.php?controlador=proveedor&accion=editar', {
-                method: 'POST',
-                body: formData
-            });
+            await Endpoints.actualizarProveedor(formData);
 
-            window.location.reload();
+            if (typeof showToast === 'function') showToast('Proveedor actualizado', 'success');
+            setTimeout(() => window.location.reload(), 800);
 
         } catch (error) {
             console.error(error);
@@ -103,25 +91,28 @@ function initProveedores() {
             } else {
                 alert('Error al guardar');
             }
-            btn.disabled = false;
-            btn.textContent = originalText;
+        } finally {
+            // Re-habilitar solo si no hubo éxito y recarga pendiente (aunque reload detendrá el script)
+            // Se deja por seguridad si la recarga falla o es lenta
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
         }
     });
 
     console.log('[Proveedores] Módulo inicializado ✓');
 }
 
-// =========================================================================
-// EXPORTAR AL SCOPE GLOBAL
-// =========================================================================
-window.toggleModal = toggleModal;
+// Exportar al scope global
+window.Proveedores = {
+    init: initProveedores,
+    toggleModal: toggleModal,
+    editar: editarProveedor,
+    confirmarEliminar: confirmarEliminar
+};
+window.inicializarProveedores = initProveedores;
 window.editarProveedor = editarProveedor;
 window.confirmarEliminar = confirmarEliminar;
 window.cerrarModalGlobal = cerrarModalGlobal;
-
-// Inicializar
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initProveedores);
-} else {
-    initProveedores();
-}
+window.toggleModal = toggleModal;

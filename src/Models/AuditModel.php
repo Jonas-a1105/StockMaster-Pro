@@ -1,18 +1,24 @@
 <?php
 namespace App\Models;
 
+use App\Core\BaseModel;
 use App\Core\Database;
 use \PDO;
 
 /**
  * Modelo de Auditoría - Registra todas las acciones del sistema
  */
-class AuditModel {
-    
-    private $db;
+class AuditModel extends BaseModel {
+    protected $table = 'audit_logs';
+    protected $fillable = [
+        'user_id', 'action', 'entity_type', 'entity_id', 
+        'entity_name', 'old_values', 'new_values', 
+        'ip_address', 'user_agent', 'created_at'
+    ];
+    protected $timestamps = true;
 
     public function __construct() {
-        $this->db = Database::conectar();
+        parent::__construct();
     }
 
     /**
@@ -27,20 +33,16 @@ class AuditModel {
      * @param array|null $newValues Valores nuevos
      */
     public function registrar($userId, $action, $entityType, $entityId = null, $entityName = null, $oldValues = null, $newValues = null) {
-        $query = "INSERT INTO audit_logs (user_id, action, entity_type, entity_id, entity_name, old_values, new_values, ip_address, user_agent) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([
-            $userId,
-            $action,
-            $entityType,
-            $entityId,
-            $entityName,
-            $oldValues ? json_encode($oldValues, JSON_UNESCAPED_UNICODE) : null,
-            $newValues ? json_encode($newValues, JSON_UNESCAPED_UNICODE) : null,
-            $_SERVER['REMOTE_ADDR'] ?? null,
-            substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255)
+        return $this->create([
+            'user_id' => $userId,
+            'action' => $action,
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'entity_name' => $entityName,
+            'old_values' => $oldValues ? json_encode($oldValues, JSON_UNESCAPED_UNICODE) : null,
+            'new_values' => $newValues ? json_encode($newValues, JSON_UNESCAPED_UNICODE) : null,
+            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
+            'user_agent' => substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255)
         ]);
     }
 
@@ -48,73 +50,50 @@ class AuditModel {
      * Obtener historial de auditoría con filtros
      */
     public function obtenerHistorial($userId = null, $filtros = []) {
-        $query = "SELECT a.*, u.email as user_email 
-                  FROM audit_logs a
-                  LEFT JOIN usuarios u ON a.user_id = u.id
-                  WHERE 1=1";
+        $query = $this->scopeUser($userId)
+            ->table($this->table)
+            ->select(['audit_logs.*'])
+            ->selectRaw('usuarios.email as user_email')
+            ->leftJoin('usuarios', 'audit_logs.user_id', '=', 'usuarios.id');
         
-        $params = [];
-        
-        // Solo para un usuario específico (no admin ve solo lo suyo)
-        if ($userId) {
-            $query .= " AND a.user_id = ?";
-            $params[] = $userId;
-        }
-        
-        // Filtro por entidad
         if (!empty($filtros['entity_type'])) {
-            $query .= " AND a.entity_type = ?";
-            $params[] = $filtros['entity_type'];
+            $query->where('audit_logs.entity_type', $filtros['entity_type']);
         }
         
-        // Filtro por acción
         if (!empty($filtros['action'])) {
-            $query .= " AND a.action = ?";
-            $params[] = $filtros['action'];
+            $query->where('audit_logs.action', $filtros['action']);
         }
         
-        // Filtro por fecha
         if (!empty($filtros['fecha_inicio'])) {
-            $query .= " AND a.created_at >= ?";
-            $params[] = $filtros['fecha_inicio'];
+            $query->where('audit_logs.created_at', '>=', $filtros['fecha_inicio']);
         }
         
         if (!empty($filtros['fecha_fin'])) {
-            $query .= " AND a.created_at <= ?";
-            $params[] = $filtros['fecha_fin'] . ' 23:59:59';
+            $query->where('audit_logs.created_at', '<=', $filtros['fecha_fin'] . ' 23:59:59');
         }
         
-        // Búsqueda por nombre de entidad
         if (!empty($filtros['busqueda'])) {
-            $query .= " AND a.entity_name LIKE ?";
-            $params[] = '%' . $filtros['busqueda'] . '%';
+            $query->where('audit_logs.entity_name', 'LIKE', '%' . $filtros['busqueda'] . '%');
         }
         
-        $query .= " ORDER BY a.created_at DESC";
-        
-        // Limitar resultados
-        $limit = (int)($filtros['limit'] ?? 100);
-        $query .= " LIMIT $limit";
-        
-        $stmt = $this->db->prepare($query);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
+        return $query->orderBy('audit_logs.created_at', 'DESC')
+            ->limit((int)($filtros['limit'] ?? 100))
+            ->get();
     }
 
     /**
      * Obtener historial de una entidad específica
      */
     public function obtenerHistorialEntidad($entityType, $entityId) {
-        $query = "SELECT a.*, u.email as user_email 
-                  FROM audit_logs a
-                  LEFT JOIN usuarios u ON a.user_id = u.id
-                  WHERE a.entity_type = ? AND a.entity_id = ?
-                  ORDER BY a.created_at DESC
-                  LIMIT 50";
-        
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$entityType, $entityId]);
-        return $stmt->fetchAll();
+        return $this->query()
+            ->select(['audit_logs.*'])
+            ->selectRaw('usuarios.email as user_email')
+            ->leftJoin('usuarios', 'audit_logs.user_id', '=', 'usuarios.id')
+            ->where('audit_logs.entity_type', $entityType)
+            ->where('audit_logs.entity_id', $entityId)
+            ->orderBy('audit_logs.created_at', 'DESC')
+            ->limit(50)
+            ->get();
     }
 
     /**
@@ -122,17 +101,13 @@ class AuditModel {
      */
     public function obtenerResumenActividad($userId, $dias = 7) {
         $startDate = date('Y-m-d H:i:s', strtotime("-$dias days"));
-        $query = "SELECT 
-                    action,
-                    entity_type,
-                    COUNT(*) as cantidad
-                  FROM audit_logs
-                  WHERE user_id = ? AND created_at >= ?
-                  GROUP BY action, entity_type
-                  ORDER BY cantidad DESC";
-        
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$userId, $startDate]);
-        return $stmt->fetchAll();
+        return $this->query()
+            ->select(['action', 'entity_type'])
+            ->selectRaw('COUNT(*) as cantidad')
+            ->where('user_id', $userId)
+            ->where('created_at', '>=', $startDate)
+            ->groupBy(['action', 'entity_type'])
+            ->orderBy('cantidad', 'DESC')
+            ->get();
     }
 }

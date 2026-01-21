@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="StockMaster Pro - Sistema de Gestión de Inventario">
-    <title>StockMaster Pro</title>
+    <title><?php echo $titulo ?? 'StockMaster Pro'; ?></title>
     
     <link rel="shortcut icon" href="<?= BASE_URL ?>img/StockMasterPro.ico" type="image/x-icon">
     
-    <!-- Tailwind CSS (Local Build) -->
+    <!-- CSS Dependencies -->
+    <link rel="stylesheet" href="<?= BASE_URL ?>css/variables.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>css/main.css?v=<?= time() ?>">
     
     <!-- Inter Font -->
@@ -32,7 +33,7 @@
             to { opacity: 1; transform: scale(1) translateY(0); }
         }
         
-        .slide-up { animation: slideUp 0.3s ease-out; }
+        .slide-up { animation: slideUp var(--transition-slow); }
         @keyframes slideUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -54,26 +55,17 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
-        
-        /* Ping Animation (Manual Injection) */
-        @keyframes ping {
-            75%, 100% {
-                transform: scale(2);
-                opacity: 0;
-            }
-        }
-        .animate-ping {
-            animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
 
         /* Input focus ring */
-        .input-focus {
-            @apply focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500;
+        .input-focus:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+            border-color: #10b981;
         }
         
         /* Tabla zebra */
         .table-zebra tbody tr:nth-child(even) {
-            @apply bg-slate-50/50;
+            background-color: rgba(248, 250, 252, 0.5);
         }
         
         /* Glass effect para overlays */
@@ -83,7 +75,7 @@
         }
         
         /* Dark mode transitions */
-        * { transition: background-color 0.2s, border-color 0.2s, color 0.2s; }
+        * { transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast); }
 
         /* FORCE RESPONSIVENESS (Fix for missing Tailwind classes) */
         @media (max-width: 640px) {
@@ -124,7 +116,7 @@
                     We just need to ensure it's ALLOWED to show if 'hidden' is removed.
                     The 'lg:hidden' class on the container means "Hide on LG, show on small". 
                     So on <1024, it should be display: block (default) unless 'hidden' is present.
-                 */
+                  */
                  display: block; /* Default state for opened menu */
             }
             #mobile-menu.hidden {
@@ -141,31 +133,27 @@
         require_once __DIR__ . '/../../src/Helpers/Icons.php';
     ?>
     
+    <!-- Skip to Content Link (Accesibilidad) -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-emerald-600 focus:text-white focus:rounded-lg focus:font-bold focus:shadow-lg">
+        Saltar al contenido principal
+    </a>
+    
     <!-- NAVBAR (Full Width) -->
     <?php require __DIR__ . '/../partials/navbar-enterprise.php'; ?>
     
     <!-- CONTENEDOR PRINCIPAL (Boxed Layout) -->
-    <main class="max-w-[1440px] mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-6">
+    <main id="main-content" class="max-w-[1440px] mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-6" role="main">
+
         <!-- Caja Principal -->
         <div class="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-[32px] border border-slate-200 dark:border-slate-700 shadow-soft min-h-[calc(100vh-140px)] sm:min-h-[calc(100vh-180px)] flex flex-col overflow-visible">
             
             <!-- Contenido de la Vista -->
             <div class="flex-1 p-4 sm:p-6 lg:p-8">
-                <?php
-                    if (isset($vistaContenido) && file_exists($vistaContenido)) {
-                        require $vistaContenido;
-                    } else {
-                        echo '<div class="text-center py-20">
-                            <div class="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-                                <svg class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                </svg>
-                            </div>
-                            <h2 class="text-xl font-semibold text-slate-800 dark:text-white">Vista no encontrada</h2>
-                            <p class="text-slate-500 mt-2">La página que buscas no existe.</p>
-                        </div>';
-                    }
-                ?>
+                <script>
+                    // Global CSRF Token for AJAX requests
+                    window.csrfToken = '<?php echo \App\Core\Session::csrfToken(); ?>';
+                </script>
+                <?php echo $content ?? ''; ?>
             </div>
             
             <!-- Footer Sticky -->
@@ -193,9 +181,12 @@
                         <button onclick="closeModal('modal-logout')" class="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                             Cancelar
                         </button>
-                        <a href="index.php?controlador=login&accion=logout" class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors text-center">
-                            Sí, salir
-                        </a>
+                        <form action="index.php?controlador=login&accion=logout" method="POST" class="flex-1">
+                            <?= \App\Helpers\Security::csrfField() ?>
+                            <button type="submit" class="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors text-center">
+                                Sí, salir
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -228,24 +219,24 @@
         </div>
     </div>
     
-    <!-- Toast Notification -->
-    <div id="toast-container" class="fixed bottom-6 right-6 z-[200] space-y-2"></div>
+    <!-- Toast Notification Container (Top Right) -->
+    <div id="toast-container-main" class="fixed top-20 right-4 z-[200] space-y-3 w-full max-w-sm pointer-events-none"></div>
+
     
     <!-- Flash Messages (Bridge to JS) -->
     <?php 
         // Verificar si hay mensajes flash en la sesión y pasarlos al JS
-        use App\Core\Session;
-        if (Session::hasFlash()) {
+        if (\App\Core\Session::hasFlash()) {
             $flashMsg = '';
             $flashType = 'success';
             
-            if ($msg = Session::getFlash('success')) {
+            if ($msg = \App\Core\Session::getFlash('success')) {
                 $flashMsg = $msg;
                 $flashType = 'success';
-            } elseif ($msg = Session::getFlash('error')) {
+            } elseif ($msg = \App\Core\Session::getFlash('error')) {
                 $flashMsg = $msg;
                 $flashType = 'error';
-            } elseif ($msg = Session::getFlash('warning')) {
+            } elseif ($msg = \App\Core\Session::getFlash('warning')) {
                 $flashMsg = $msg;
                 $flashType = 'warning';
             }
@@ -257,11 +248,10 @@
     ?>
     
     <!-- SCRIPTS -->
-    <!-- SCRIPTS -->
     <?php require __DIR__ . '/../partials/scripts.php'; ?>
     
     <!-- Enterprise UI Scripts -->
-    <!-- Módulo Core de UI (cargado desde archivo externo) -->
+    <script src="<?= BASE_URL ?>js/core/store.js?v=<?= time() ?>"></script>
     <script src="<?= BASE_URL ?>js/core/core.js?v=<?= time() ?>"></script>
     
 </body>

@@ -59,10 +59,8 @@ async function actualizarCharts() {
     }
 
     try {
-        const response = await fetch('index.php?controlador=dashboard&accion=apiDatosGraficos');
-        if (!response.ok) throw new Error('Error al cargar gráficos');
+        const data = await Endpoints.datosGraficos();
 
-        const data = await response.json();
         const labels = data.labels;
 
         // Gráfico de Valor por Categoría

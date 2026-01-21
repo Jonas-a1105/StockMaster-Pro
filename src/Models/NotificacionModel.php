@@ -1,98 +1,92 @@
 <?php
 namespace App\Models;
 
+use App\Core\BaseModel;
 use App\Core\Database;
 use \PDO;
 
 /**
  * Modelo de Notificaciones - Gestiona las notificaciones del sistema
  */
-class NotificacionModel {
-    
-    private $db;
+class NotificacionModel extends BaseModel {
+    protected $table = 'notificaciones';
+    protected $fillable = [
+        'user_id', 'tipo', 'titulo', 'mensaje', 
+        'leida', 'prioridad', 'link', 'icono'
+    ];
+    protected $timestamps = true;
 
     public function __construct() {
-        $this->db = Database::conectar();
+        parent::__construct();
     }
 
     /**
      * Crear una nueva notificación
      */
     public function crear($userId, $tipo, $titulo, $mensaje, $prioridad = 'media', $link = null, $icono = 'fa-bell') {
-        $query = "INSERT INTO notificaciones (user_id, tipo, titulo, mensaje, prioridad, link, icono) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?)";
-        
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$userId, $tipo, $titulo, $mensaje, $prioridad, $link, $icono]);
-        return $this->db->lastInsertId();
+        return $this->create([
+            'user_id' => $userId,
+            'tipo' => $tipo,
+            'titulo' => $titulo,
+            'mensaje' => $mensaje,
+            'prioridad' => $prioridad,
+            'link' => $link,
+            'icono' => $icono
+        ]);
     }
 
     /**
      * Obtener notificaciones no leídas de un usuario
      */
     public function obtenerNoLeidas($userId, $limite = 10) {
-        $query = "SELECT * FROM notificaciones 
-                  WHERE user_id = ? AND leida = FALSE 
-                  ORDER BY created_at DESC 
-                  LIMIT ?";
-        
-        $stmt = $this->db->prepare($query);
-        $stmt->bindValue(1, $userId, PDO::PARAM_INT);
-        $stmt->bindValue(2, $limite, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll();
+        return $this->query()
+            ->where('user_id', $userId)
+            ->where('leida', false)
+            ->orderBy('created_at', 'DESC')
+            ->limit($limite)
+            ->get();
     }
 
     /**
      * Contar notificaciones no leídas
      */
     public function contarNoLeidas($userId) {
-        $query = "SELECT COUNT(*) as total FROM notificaciones 
-                  WHERE user_id = ? AND leida = FALSE";
-        
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$userId]);
-        $result = $stmt->fetch();
-        return (int)$result['total'];
+        return $this->query()
+            ->where('user_id', $userId)
+            ->where('leida', false)
+            ->count();
     }
 
     /**
      * Obtener todas las notificaciones (paginadas)
      */
     public function obtenerTodas($userId, $limite = 50, $offset = 0) {
-        $query = "SELECT * FROM notificaciones 
-                  WHERE user_id = ? 
-                  ORDER BY created_at DESC 
-                  LIMIT ? OFFSET ?";
-        
-        $stmt = $this->db->prepare($query);
-        $stmt->bindValue(1, $userId, PDO::PARAM_INT);
-        $stmt->bindValue(2, $limite, PDO::PARAM_INT);
-        $stmt->bindValue(3, $offset, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll();
+        return $this->query()
+            ->where('user_id', $userId)
+            ->orderBy('created_at', 'DESC')
+            ->limit($limite)
+            ->offset($offset)
+            ->get();
     }
 
     /**
      * Marcar notificación como leída
      */
     public function marcarLeida($userId, $id) {
-        $query = "UPDATE notificaciones SET leida = TRUE 
-                  WHERE id = ? AND user_id = ?";
-        
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([$id, $userId]);
+        return $this->query()
+            ->where('id', $id)
+            ->where('user_id', $userId)
+            ->update(['leida' => true]) > 0;
     }
 
     /**
      * Marcar todas como leídas
      */
     public function marcarTodasLeidas($userId) {
-        $query = "UPDATE notificaciones SET leida = TRUE 
-                  WHERE user_id = ? AND leida = FALSE";
-        
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([$userId]);
+        return $this->query()
+            ->where('user_id', $userId)
+            ->where('leida', false)
+            ->update(['leida' => true]) > 0;
     }
 
     /**
@@ -100,11 +94,10 @@ class NotificacionModel {
      */
     public function limpiarAntiguas($userId) {
         $threshold = date('Y-m-d H:i:s', strtotime('-30 days'));
-        $query = "DELETE FROM notificaciones 
-                  WHERE user_id = ? AND created_at < ?";
-        
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([$userId, $threshold]);
+        return $this->query()
+            ->where('user_id', $userId)
+            ->where('created_at', '<', $threshold)
+            ->delete() > 0;
     }
 
     /**

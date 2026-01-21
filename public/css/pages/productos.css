@@ -1,0 +1,73 @@
+/* === ANIMACIÓN MODO SELECCIÓN === */
+
+.animate-fade-in-right {
+    animation: fadeInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeInRight {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* Default: Hide columns when not in selection mode */
+#tabla-inventario:not(.selection-visible) .selection-col {
+    display: none !important;
+}
+
+/* Base state: columns visible but collapsed */
+#tabla-inventario.selection-visible .selection-col {
+    width: 0;
+    min-width: 0;
+    max-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s ease-out,
+                padding 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Expanded state: columns fully visible */
+#tabla-inventario.selection-expanded .selection-col {
+    width: 3.5rem !important;
+    min-width: 3.5rem;
+    max-width: 3.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    opacity: 1 !important;
+}
+
+/* Bulk Actions Wrapper - Base collapsed state */
+#bulk-actions-wrapper {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    padding-right: 0;
+    margin-right: 0;
+    pointer-events: none;
+    transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.35s ease-out,
+                padding 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                margin 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Bulk Actions Wrapper - Expanded state */
+#bulk-actions-wrapper.expanded {
+    max-width: 280px;
+    opacity: 1;
+    padding-right: 12px;
+    margin-right: 8px;
+    pointer-events: auto;
+}
+
+/* Force Checkbox Visibility (Bypassing Tailwind JIT) */
+.product-checkbox:checked + .visual-checkbox {
+    background-color: #ef4444 !important; /* red-500 */
+    border-color: #ef4444 !important;
+}
+.product-checkbox:checked + .visual-checkbox .checkmark-icon {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+}

@@ -39,8 +39,7 @@ async function cargarYCalcularBs() {
     try {
         let tasa = window.tasaCambioBS || 0;
         if (tasa <= 0) {
-            const response = await fetch('index.php?controlador=config&accion=obtenerTasa');
-            const data = await response.json();
+            const data = await Endpoints.obtenerTasa();
             tasa = data.tasa || 0;
         }
 
@@ -63,12 +62,7 @@ function desactivarCliente(id) {
 
     // Opcional: Mostrar loading en el botón si se pasara el evento, pero por ahora simple alert/redirect
 
-    fetch('index.php?controlador=cliente&accion=desactivar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'id=' + id
-    })
-        .then(r => r.json())
+    Endpoints.desactivarCliente(id)
         .then(data => {
             if (data.success) {
                 // Usamos el sistema de notificaciones si está disponible, o alert fallback

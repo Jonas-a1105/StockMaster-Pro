@@ -1,121 +1,114 @@
 <?php
 namespace App\Controllers;
-
-use App\Core\Database;
+ 
+use App\Core\BaseController;
 use App\Core\Session;
-
-class ConfigController {
-
+use App\Models\UsuarioModel;
+use App\Domain\Enums\UserPlan;
+use App\Exceptions\ForbiddenException;
+use App\Exceptions\ValidationException;
+use App\Exceptions\AppException;
+ 
+class ConfigController extends BaseController {
+    private $usuarioModel;
+ 
     public function __construct() {
-        if ($_SESSION['user_plan'] === 'free') {
-            redirect('index.php?controlador=premium');
+        parent::__construct();
+        $this->usuarioModel = new UsuarioModel();
+ 
+        if ($this->userPlan === UserPlan::FREE->value) {
+            if ($this->request->isAjax()) {
+                throw new ForbiddenException('Función exclusiva Premium.');
+            }
+            return $this->response->redirect('index.php?controlador=premium');
         }
     }
 
     public function index() {
-        $db = Database::conectar();
-        $stmt = $db->prepare("SELECT empresa_nombre, empresa_direccion, empresa_telefono, empresa_logo FROM usuarios WHERE id = ?");
-        $stmt->execute([$_SESSION['user_id']]);
-        $config = $stmt->fetch();
-
-        $this->render('config/index', ['config' => $config]);
+        $userId = Session::get('user_id');
+        $config = $this->usuarioModel->find($userId);
+        return $this->response->view('config/index', ['config' => $config]);
     }
 
     public function guardarTasa() {
-        header('Content-Type: application/json');
-        $data = json_decode(file_get_contents('php://input'), true);
-        $tasa = (float)($data['tasa'] ?? 0);
-        
         if ($tasa > 0) {
-            // Guardar en sesión
-            $_SESSION['tasa_bcv'] = $tasa;
+            Session::set('tasa_bcv', $tasa);
             
-            // Guardar en Base de Datos
             try {
-                $db = Database::conectar();
-                $stmt = $db->prepare("UPDATE usuarios SET tasa_dolar = ? WHERE id = ?");
-                $stmt->execute([$tasa, $_SESSION['user_id']]);
-                
-                echo json_encode(['success' => true, 'message' => 'Tasa actualizada y guardada']);
+                $this->usuarioModel->update(Session::get('user_id'), ['tasa_dolar' => $tasa]);
+                return $this->response->json(['success' => true, 'message' => 'Tasa actualizada y guardada en base de datos.']);
             } catch (\Exception $e) {
-                // Si falla la BD, al menos queda en sesión
-                echo json_encode(['success' => true, 'message' => 'Tasa actualizada (solo sesión)']);
+                // Si falla el DB update, al menos se guarda en sesión
+                return $this->response->json(['success' => true, 'message' => 'Tasa actualizada (solo sesión temporal).']);
             }
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Tasa inválida']);
         }
-        exit;
+        
+        throw new AppException('La tasa debe ser mayor a cero.', 400);
     }
     
     public function obtenerTasa() {
-        header('Content-Type: application/json');
+        $tasa = (float)Session::get('tasa_bcv', 0);
         
-        // Si no está en sesión, intentar buscar en BD
-        if (empty($_SESSION['tasa_bcv']) || $_SESSION['tasa_bcv'] <= 0) {
-            try {
-                $db = Database::conectar();
-                $stmt = $db->prepare("SELECT tasa_dolar FROM usuarios WHERE id = ?");
-                $stmt->execute([$_SESSION['user_id']]);
-                $user = $stmt->fetch();
-                
-                if ($user && $user['tasa_dolar'] > 0) {
-                    $_SESSION['tasa_bcv'] = (float)$user['tasa_dolar'];
-                }
-            } catch (\Exception $e) {
-                // Silencioso
+        if ($tasa <= 0) {
+            $user = $this->usuarioModel->find(Session::get('user_id'));
+            if ($user && isset($user['tasa_dolar']) && $user['tasa_dolar'] > 0) {
+                $tasa = (float)$user['tasa_dolar'];
+                Session::set('tasa_bcv', $tasa);
             }
         }
         
-        $tasa = (float)($_SESSION['tasa_bcv'] ?? 0);
-        echo json_encode(['success' => true, 'tasa' => $tasa]);
-        exit;
+        return $this->response->json(['success' => true, 'tasa' => $tasa]);
     }
 
     public function guardar() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $nombre = $_POST['nombre'];
-            $direccion = $_POST['direccion'];
-            $telefono = $_POST['telefono'];
-            $userId = $_SESSION['user_id'];
-
-            $db = Database::conectar();
-            
-            // 1. Actualizar textos
-            $sql = "UPDATE usuarios SET empresa_nombre = ?, empresa_direccion = ?, empresa_telefono = ? WHERE id = ?";
-            $params = [$nombre, $direccion, $telefono, $userId];
-            $stmt = $db->prepare($sql);
-            $stmt->execute($params);
-
-            // 2. Procesar Logo (Si se subió uno)
-            if (isset($_FILES['logo']) && $_FILES['logo']['error'] === 0) {
-                $permitidos = ['image/jpeg', 'image/png', 'image/jpg'];
-                if (in_array($_FILES['logo']['type'], $permitidos)) {
-                    
-                    $ext = pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION);
-                    $nombreArchivo = 'logo_' . $userId . '.' . $ext;
-                    $rutaDestino = __DIR__ . '/../../public/uploads/' . $nombreArchivo;
-                    
-                    // Crear carpeta si no existe
-                    if (!file_exists(__DIR__ . '/../../public/uploads/')) {
-                        mkdir(__DIR__ . '/../../public/uploads/', 0777, true);
-                    }
-
-                    if (move_uploaded_file($_FILES['logo']['tmp_name'], $rutaDestino)) {
-                        // Guardar ruta en BD
-                        $stmtLogo = $db->prepare("UPDATE usuarios SET empresa_logo = ? WHERE id = ?");
-                        $stmtLogo->execute([$nombreArchivo, $userId]);
-                    }
-                }
-            }
-
-            Session::flash('success', 'Configuración guardada.');
+        if (!$this->request->isPost()) {
+            throw new AppException('Solicitud inválida.', 405);
         }
-        redirect('index.php?controlador=config');
-    }
 
-    private function render($vista, $data = []) {
-        extract($data);
-        $vistaContenido = __DIR__ . '/../../views/' . $vista . '.php';
-        require __DIR__ . '/../../views/layouts/main.php';
+        $userId = Session::get('user_id');
+        $data = [
+            'empresa_nombre' => $this->request->input('nombre'),
+            'empresa_direccion' => $this->request->input('direccion'),
+            'empresa_telefono' => $this->request->input('telefono'),
+        ];
+
+        // Procesar Logo usando Request wrapper y finfo para seguridad real
+        if ($this->request->hasFile('logo')) {
+            $logoFile = $this->request->file('logo');
+            
+            // Validar mediante contenido real
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime = finfo_file($finfo, $logoFile['tmp_name']);
+            finfo_close($finfo);
+            
+            $permitidos = ['image/jpeg', 'image/png', 'image/gif'];
+            
+            if (in_array($mime, $permitidos)) {
+                $ext = pathinfo($logoFile['name'], PATHINFO_EXTENSION);
+                // Forzar extensión según MIME si es posible, o sanear
+                $ext = strtolower($ext);
+                if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) {
+                    $ext = ($mime === 'image/png') ? 'png' : 'jpg';
+                }
+                
+                $nombreArchivo = 'logo_' . $userId . '.' . $ext;
+                $rutaDestino = __DIR__ . '/../../public/uploads/' . $nombreArchivo;
+                
+                if (!file_exists(__DIR__ . '/../../public/uploads/')) {
+                    mkdir(__DIR__ . '/../../public/uploads/', 0777, true);
+                }
+
+                if (move_uploaded_file($logoFile['tmp_name'], $rutaDestino)) {
+                    $data['empresa_logo'] = $nombreArchivo;
+                }
+            } else {
+                Session::flash('error', 'El archivo no es una imagen válida.');
+            }
+        }
+
+        $this->usuarioModel->update($userId, $data);
+        Session::flash('success', 'Configuración guardada.');
+        
+        return $this->response->redirect('index.php?controlador=config');
     }
 }

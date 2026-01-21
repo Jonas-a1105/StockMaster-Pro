@@ -32,6 +32,7 @@ $current_username = $current_username ?? '';
             </h3>
             
             <form action="index.php?controlador=perfil&accion=actualizarInformacion" method="POST" class="space-y-6">
+                <?= \App\Helpers\Security::csrfField() ?>
                 <!-- Usuario -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Nombre de Usuario</label>
@@ -39,8 +40,8 @@ $current_username = $current_username ?? '';
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <?= Icons::get('user', 'w-5 h-5 text-slate-400') ?>
                         </div>
-                        <input type="text" name="username" value="<?= htmlspecialchars($current_username) ?>" required placeholder="jdoe" style="padding-left: 3rem;"
-                               class="w-full pr-4 py-3 bg-slate-50 dark:bg-slate-700/50 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all">
+                        <input type="text" name="username" value="<?= htmlspecialchars($current_username) ?>" required placeholder="jdoe"
+                               class="w-full pl-12 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all">
                     </div>
                 </div>
 
@@ -51,8 +52,8 @@ $current_username = $current_username ?? '';
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <?= Icons::get('mail', 'w-5 h-5 text-slate-400') ?>
                         </div>
-                        <input type="email" name="email" value="<?= htmlspecialchars($current_email) ?>" required placeholder="correo@ejemplo.com" style="padding-left: 3rem;"
-                               class="w-full pr-4 py-3 bg-slate-50 dark:bg-slate-700/50 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all">
+                        <input type="email" name="email" value="<?= htmlspecialchars($current_email) ?>" required placeholder="correo@ejemplo.com"
+                               class="w-full pl-12 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all">
                     </div>
                 </div>
                 
@@ -62,8 +63,8 @@ $current_username = $current_username ?? '';
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <?= Icons::get('lock', 'w-5 h-5 text-slate-400') ?>
                         </div>
-                        <input type="password" name="password" required placeholder="••••••••" style="padding-left: 3rem;"
-                               class="w-full pr-4 py-3 bg-slate-50 dark:bg-slate-700/50 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all">
+                        <input type="password" name="password" required placeholder="••••••••"
+                               class="w-full pl-12 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all">
                     </div>
                     <p class="text-xs text-slate-400 mt-2">Ingresa tu contraseña actual para guardar los cambios.</p>
                 </div>
@@ -86,14 +87,15 @@ $current_username = $current_username ?? '';
             </h3>
             
             <form action="index.php?controlador=perfil&accion=actualizarPassword" method="POST" class="space-y-6">
+                <?= \App\Helpers\Security::csrfField() ?>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Contraseña Actual</label>
                      <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <?= Icons::get('lock', 'w-5 h-5 text-slate-400') ?>
                         </div>
-                        <input type="password" name="current_password" required placeholder="••••••••" style="padding-left: 3rem;"
-                               class="w-full pr-4 py-3 bg-slate-50 dark:bg-slate-700/50 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all">
+                        <input type="password" name="current_password" required placeholder="••••••••"
+                               class="w-full pl-12 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all">
                     </div>
                 </div>
                 
@@ -103,8 +105,8 @@ $current_username = $current_username ?? '';
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <?= Icons::get('help-circle', 'w-5 h-5 text-slate-400') ?>
                         </div>
-                        <input type="password" name="new_password" required placeholder="••••••••" style="padding-left: 3rem;"
-                               class="w-full pr-4 py-3 bg-slate-50 dark:bg-slate-700/50 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all">
+                        <input type="password" name="new_password" required placeholder="••••••••"
+                               class="w-full pl-12 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all">
                     </div>
                 </div>
                 
@@ -114,8 +116,8 @@ $current_username = $current_username ?? '';
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <?= Icons::get('check-circle', 'w-5 h-5 text-slate-400') ?>
                         </div>
-                        <input type="password" name="confirm_password" required placeholder="••••••••" style="padding-left: 3rem;"
-                               class="w-full pr-4 py-3 bg-slate-50 dark:bg-slate-700/50 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all">
+                        <input type="password" name="confirm_password" required placeholder="••••••••"
+                               class="w-full pl-12 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all">
                     </div>
                 </div>
                 

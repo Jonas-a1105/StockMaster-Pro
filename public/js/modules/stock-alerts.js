@@ -16,7 +16,7 @@ function configurarAlertasStock() {
         if (val > 0) {
             localStorage.setItem('stockUmbral', val);
             umbralStockBajo = val;
-            fetch(`index.php?controlador=perfil&accion=actualizarUmbral&umbral=${val}`);
+            Endpoints.actualizarUmbralStock(val);
             mostrarNotificacion('Umbral actualizado.', 'success');
             verificarAlertasStock();
         }
@@ -30,9 +30,7 @@ function configurarAlertasStock() {
 async function verificarAlertasStock() {
     const umbral = localStorage.getItem('stockUmbral') || 10;
     try {
-        const response = await fetch(`index.php?controlador=producto&accion=apiObtenerAlertas&umbral=${umbral}`);
-        if (!response.ok) return;
-        const data = await response.json();
+        const data = await Endpoints.obtenerAlertas(umbral);
 
         if (data.agotado?.length > 0) {
             mostrarNotificacion(`AGOTADO: ${data.agotado[0].nombre}`, 'error');

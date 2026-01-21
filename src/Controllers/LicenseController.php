@@ -1,62 +1,67 @@
 <?php
 namespace App\Controllers;
-
-use App\Core\Controller; // Assuming Base Controller exists or similar
+ 
+use App\Core\BaseController;
 use App\Helpers\LicenseHelper;
 use App\Core\Session;
-
-class LicenseController {
+use App\Models\UsuarioModel;
+use App\Domain\Enums\UserPlan;
+ 
+class LicenseController extends BaseController {
+    private $usuarioModel;
+ 
+    public function __construct() {
+        parent::__construct();
+        $this->usuarioModel = new UsuarioModel();
+    }
     
-    // Renderiza la vista de activación (Bloqueo)
-    // Renderiza la vista de activación (Bloqueo)
+    /**
+     * Renderiza la vista de activación (Bloqueo)
+     */
     public function index() {
-        // DEBUG TEMPORAL ELIMINADO
-        
         // Si ya está activa, redirigir al dashboard
         if (LicenseHelper::validarEstado()) {
-            header("Location: index.php?controlador=dashboard");
-            exit;
+            return $this->response->redirect('index.php?controlador=dashboard');
         }
         
-        require __DIR__ . '/../../views/license/activate.php';
+        return $this->response->view('license/activate');
     }
 
-    // Procesa la activación
+    /**
+     * Procesa la activación de licencia
+     */
     public function activar() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $key = $_POST['license_key'] ?? '';
+        if (!$this->request->isPost()) {
+            return $this->response->redirect('index.php?controlador=dashboard');
+        }
+
+        $key = $this->request->input('license_key');
+        $resultado = LicenseHelper::activarLicencia($key);
+
+        if ($resultado['success']) {
+            // 1. Actualizar Sesión usando Enum
+            Session::set('user_plan', UserPlan::PREMIUM->value);
             
-            $resultado = LicenseHelper::activarLicencia($key);
-
-            if ($resultado['success']) {
-                // 1. Actualizar Sesión
-                $_SESSION['user_plan'] = 'premium';
-                
-                // 2. Actualizar Usuario en BD (Para que persista al reloguear)
-                if (isset($_SESSION['user_id'])) {
-                    $userId = $_SESSION['user_id'];
-                    $db = \App\Core\Database::conectar();
-                    $stmt = $db->prepare("UPDATE usuarios SET plan = 'premium' WHERE id = ?");
-                    $stmt->execute([$userId]);
-                }
-
-                Session::flash('success', $resultado['message']);
-                header("Location: index.php?controlador=dashboard");
-            } else {
-                Session::flash('error', $resultado['message']);
-                // IMPORTANTE: Redirigir a FREE porque ahí está ahora el formulario
-                header("Location: index.php?controlador=free"); 
+            // 2. Actualizar Usuario en BD
+            $userId = Session::get('user_id');
+            if ($userId) {
+                $this->usuarioModel->update($userId, ['plan' => UserPlan::PREMIUM->value]);
             }
-            exit;
+
+            Session::flash('success', $resultado['message']);
+            return $this->response->redirect('index.php?controlador=dashboard');
+        } else {
+            Session::flash('error', $resultado['message']);
+            // Redirigir a free porque ahí está el formulario de upgrade
+            return $this->response->redirect('index.php?controlador=free'); 
         }
     }
-    // Endpoint AJAX para verificar estado (Heartbeat)
+
+    /**
+     * Endpoint AJAX para verificar estado (Heartbeat)
+     */
     public function checkStatus() {
-        header('Content-Type: application/json');
-        
         $isActive = LicenseHelper::validarEstado();
-        
-        echo json_encode(['active' => $isActive]);
-        exit;
+        return $this->response->json(['active' => $isActive]);
     }
 }

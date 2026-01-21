@@ -62,19 +62,19 @@ function renderizarCarrito() {
         const subtotal = item.precio * item.cantidad;
         return `
             <tr class="group">
-                <td class="py-3">
+                <td class="px-4 py-4">
                     <p class="font-medium text-slate-800 dark:text-white">${escapeHTML(item.nombre)}</p>
                 </td>
-                <td class="py-3 text-center">
+                <td class="px-4 py-4 text-center">
                     <input type="number" 
                            class="w-16 px-2 py-1.5 bg-slate-100 dark:bg-slate-600 border-0 rounded-lg text-center font-semibold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 qty-input"
                            value="${item.cantidad}" 
                            min="1"
                            onchange="actualizarCantidad(${index}, this.value)">
                 </td>
-                <td class="py-3 text-right font-mono text-slate-600 dark:text-slate-300">$${item.precio.toFixed(2)}</td>
-                <td class="py-3 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">$${subtotal.toFixed(2)}</td>
-                <td class="py-3 text-center">
+                <td class="px-4 py-4 text-right font-mono text-slate-600 dark:text-slate-300">$${item.precio.toFixed(2)}</td>
+                <td class="px-4 py-4 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">$${subtotal.toFixed(2)}</td>
+                <td class="px-4 py-4 text-center">
                     <button onclick="eliminarItem(${index})" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
@@ -156,8 +156,8 @@ function initBusquedaProductos() {
 
         searchTimer = setTimeout(async () => {
             try {
-                const res = await fetch(`index.php?controlador=venta&accion=buscarProductos&term=${encodeURIComponent(term)}`);
-                const productos = await res.json();
+                const productos = await Endpoints.buscarProductos(term);
+
                 currentSearchResults = productos;
 
                 if (productos.length === 0) {
@@ -212,8 +212,8 @@ function initBusquedaClientes() {
 
         searchClientTimer = setTimeout(async () => {
             try {
-                const res = await fetch(`index.php?controlador=cliente&accion=buscarParaPOS&term=${encodeURIComponent(term)}`);
-                const clientes = await res.json();
+                const clientes = await Endpoints.buscarClientes(term);
+
                 clientResults = clientes;
 
                 if (clientes.length === 0) {
@@ -226,7 +226,7 @@ function initBusquedaClientes() {
                             </div>
                             <div class="flex-1 min-w-0">
                                 <p class="font-medium text-slate-800 dark:text-white truncate">${escapeHTML(c.nombre)}</p>
-                                <p class="text-xs text-slate-400">${c.documento || 'Sin documento'}</p>
+                                <p class="text-xs text-slate-400">${c.numero_documento || 'Sin documento'}</p>
                             </div>
                         </div>
                     `).join('');
@@ -245,7 +245,7 @@ function seleccionarCliente(index) {
     if (!cliente) return;
 
     document.getElementById('cliente-nombre').textContent = cliente.nombre;
-    document.getElementById('cliente-documento').textContent = cliente.documento || 'Sin documento';
+    document.getElementById('cliente-documento').textContent = cliente.numero_documento || 'Sin documento';
 
     const creditoBadget = document.getElementById('cliente-credito');
     if (creditoBadget) {
@@ -308,20 +308,14 @@ async function checkoutPOS() {
             btnCobrar.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Procesando...`;
         }
 
-        const response = await fetch('index.php?controlador=venta&accion=checkout', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                carrito: window.carritoPOS,
-                tasa: tasa,
-                cliente_id: clienteId,
-                metodo_pago: metodoPago,
-                estado_pago: estadoPago,
-                notas: ''
-            })
+        const data = await Endpoints.registrarVenta({
+            carrito: window.carritoPOS,
+            tasa: tasa,
+            cliente_id: clienteId,
+            metodo_pago: metodoPago,
+            estado_pago: estadoPago,
+            notas: ''
         });
-
-        const data = await response.json();
 
         if (data.success) {
             if (typeof showToast === 'function') showToast('¡Venta registrada!', 'success');
@@ -356,8 +350,16 @@ function toggleShortcutsHelp() {
     panel.classList.toggle('pointer-events-none');
 }
 
+// Use var to allow redeclaration on TurboNav page changes
+var posShortcutsHandler = posShortcutsHandler || null;
+
 function initAtajos() {
-    document.addEventListener('keydown', (e) => {
+    // Limpiar previo si existe (para seguridad extra)
+    if (posShortcutsHandler) {
+        document.removeEventListener('keydown', posShortcutsHandler);
+    }
+
+    posShortcutsHandler = (e) => {
         // Solo en página POS
         if (!document.getElementById('pos-buscador')) return;
 
@@ -372,7 +374,17 @@ function initAtajos() {
             }
         };
         if (shortcuts[e.key]) shortcuts[e.key]();
-    });
+    };
+
+    document.addEventListener('keydown', posShortcutsHandler);
+
+    // Registrar limpieza automática para TurboNav
+    window.addEventListener('app:page-unloaded', () => {
+        if (posShortcutsHandler) {
+            document.removeEventListener('keydown', posShortcutsHandler);
+            posShortcutsHandler = null;
+        }
+    }, { once: true });
 }
 
 // =========================================================================
@@ -408,14 +420,6 @@ function initPOS() {
     console.log('[POS] Módulo inicializado ✓');
 }
 
-// =========================================================================
-// HELPER FUNCTIONS
-// =========================================================================
-function escapeHTML(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
-}
-
 // showToast se usa directamente desde window.showToast (core.js)
 // NO definir localmente para evitar recursión infinita
 
@@ -431,21 +435,6 @@ window.POS = {
 };
 
 // Funciones globales para onclick en HTML
+window.inicializarPOS = initPOS;
 window.limpiarCarrito = limpiarCarrito;
-window.renderizarCarrito = renderizarCarrito;
-window.actualizarCantidad = actualizarCantidad;
-window.eliminarItem = eliminarItem;
-window.actualizarTotalesPOS = actualizarTotalesPOS;
-window.agregarAlCarrito = agregarAlCarrito;
-window.seleccionarProducto = seleccionarProducto;
-window.seleccionarCliente = seleccionarCliente;
-window.quitarCliente = quitarCliente;
-window.checkoutPOS = checkoutPOS;
-window.toggleShortcutsHelp = toggleShortcutsHelp;
-
-// Inicializar cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPOS);
-} else {
-    initPOS();
-}
+// ... rest of globals ...

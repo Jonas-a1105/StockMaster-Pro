@@ -1,107 +1,66 @@
 <?php
 namespace App\Controllers;
 
+use App\Core\BaseController;
+use App\Core\Session;
 use App\Models\Producto;
 use App\Models\VentaModel;
 use App\Models\Cliente;
-use App\Core\Database;
+use App\Models\ApiKeyModel;
+use App\Exceptions\UnauthorizedException;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\AppException;
 
 /**
  * API REST Controller
- * 
- * Endpoints disponibles:
- * - GET  /api/productos      - Listar productos
- * - GET  /api/productos/{id} - Obtener producto
- * - GET  /api/ventas         - Listar ventas
- * - GET  /api/estadisticas   - Obtener KPIs
- * - POST /api/productos      - Crear producto
- * 
- * Autenticación: Token Bearer en header Authorization
+ * Soporta autenticación por sesión o API Key
  */
-class ApiController {
-    
-    private $userId;
+class ApiController extends BaseController {
     
     public function __construct() {
-        // Verificar autenticación API
-        if (!$this->autenticar()) {
-            $this->responderError('No autorizado. Token inválido o expirado.', 401);
-        }
-    }
-    
-    /**
-     * Autenticar request API
-     * Acepta: Bearer token en header o api_key en query string
-     */
-    private function autenticar() {
-        // Opción 1: Sesión activa (para uso desde frontend)
-        if (isset($_SESSION['user_id'])) {
-            $this->userId = $_SESSION['user_id'];
-            return true;
-        }
+        parent::__construct();
         
-        // Opción 2: API Key en query string
-        $apiKey = $_GET['api_key'] ?? null;
-        if ($apiKey) {
-            return $this->validarApiKey($apiKey);
-        }
-        
-        // Opción 3: Bearer token en header
-        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            return $this->validarApiKey($matches[1]);
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Validar API Key contra la base de datos
-     */
-    private function validarApiKey($key) {
-        try {
-            $db = Database::conectar();
-            $now = date('Y-m-d H:i:s');
-            $stmt = $db->prepare("SELECT user_id FROM api_keys WHERE api_key = ? AND activo = 1 AND (expira IS NULL OR expira > ?)");
-            $stmt->execute([$key, $now]);
-            $result = $stmt->fetch();
-            
-            if ($result) {
-                $this->userId = $result['user_id'];
-                return true;
+        // La API soporta autenticación alternativa por API Key
+        if ($this->userId <= 0) {
+            $apiKey = $this->request->query('api_key') ?? $this->request->header('Authorization');
+            if ($apiKey) {
+                if (strpos($apiKey, 'Bearer ') === 0) {
+                    $apiKey = substr($apiKey, 7);
+                }
+                if (!$this->validarApiKey($apiKey)) {
+                    throw new UnauthorizedException('No autorizado para acceder a la API.');
+                }
+            } else {
+                throw new UnauthorizedException('No autorizado para acceder a la API.');
             }
-        } catch (\Exception $e) {
-            error_log("Error validando API key: " . $e->getMessage());
+        }
+    }
+    
+    private function validarApiKey($key) {
+        $apiKeyModel = new ApiKeyModel();
+        $userId = $apiKeyModel->validateKey($key);
+        if ($userId) {
+            $this->userId = $userId;
+            return true;
         }
         return false;
     }
     
     // ==================== ENDPOINTS ====================
     
-    /**
-     * GET /api/productos
-     * Listar productos con filtros opcionales
-     * 
-     * Query params:
-     * - buscar: string (búsqueda por nombre)
-     * - categoria: string (filtrar por categoría)
-     * - limit: int (máximo 100, default 50)
-     * - offset: int (para paginación)
-     */
     public function productos() {
         $this->setCorsHeaders();
         
-        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        if ($this->request->method() === 'GET') {
             $productoModel = new Producto();
-            
-            $buscar = $_GET['buscar'] ?? '';
-            $limit = min((int)($_GET['limit'] ?? 50), 100);
-            $offset = (int)($_GET['offset'] ?? 0);
+            $buscar = $this->request->query('buscar', '');
+            $limit = min($this->request->query('limit', 50, 'int'), 100);
+            $offset = $this->request->query('offset', 0, 'int');
             
             $productos = $productoModel->obtenerTodos($this->userId, $buscar, $limit, $offset);
             $total = $productoModel->contarTodos($this->userId, $buscar);
             
-            $this->responder([
+            return $this->response->json([
                 'success' => true,
                 'data' => $productos,
                 'meta' => [
@@ -113,59 +72,41 @@ class ApiController {
             ]);
         }
         
-        $this->responderError('Método no permitido', 405);
+        throw new AppException('Método no permitido', 405);
     }
     
-    /**
-     * GET /api/producto/{id}
-     * Obtener un producto específico
-     */
     public function producto() {
         $this->setCorsHeaders();
-        $id = (int)($_GET['id'] ?? 0);
+        $id = $this->request->query('id', 0, 'int');
         
         if ($id <= 0) {
-            $this->responderError('ID de producto inválido', 400);
+            throw new AppException('ID de producto inválido', 400);
         }
         
         $productoModel = new Producto();
         $producto = $productoModel->obtenerPorId($this->userId, $id);
         
         if (!$producto) {
-            $this->responderError('Producto no encontrado', 404);
+            throw new NotFoundException('Producto no encontrado');
         }
         
-        $this->responder([
-            'success' => true,
-            'data' => $producto
-        ]);
+        return $this->response->json(['success' => true, 'data' => $producto]);
     }
     
-    /**
-     * GET /api/ventas
-     * Listar ventas con filtros
-     * 
-     * Query params:
-     * - fecha_inicio: date (YYYY-MM-DD)
-     * - fecha_fin: date (YYYY-MM-DD)
-     * - estado: string (Pagada|Pendiente)
-     * - limit: int
-     */
     public function ventas() {
         $this->setCorsHeaders();
         
         $ventaModel = new VentaModel();
-        
         $filtros = [
-            'fecha_inicio' => $_GET['fecha_inicio'] ?? null,
-            'fecha_fin' => $_GET['fecha_fin'] ?? null,
-            'estado' => $_GET['estado'] ?? null,
-            'limit' => min((int)($_GET['limit'] ?? 50), 100)
+            'fecha_inicio' => $this->request->query('fecha_inicio'),
+            'fecha_fin' => $this->request->query('fecha_fin'),
+            'estado' => $this->request->query('estado'),
+            'limit' => min($this->request->query('limit', 50, 'int'), 100)
         ];
         
         $ventas = $ventaModel->obtenerVentas($this->userId, $filtros);
         
-        $this->responder([
+        return $this->response->json([
             'success' => true,
             'data' => $ventas,
             'meta' => [
@@ -175,23 +116,19 @@ class ApiController {
         ]);
     }
     
-    /**
-     * GET /api/estadisticas
-     * Obtener KPIs del dashboard
-     */
     public function estadisticas() {
         $this->setCorsHeaders();
         
         $productoModel = new Producto();
         $ventaModel = new VentaModel();
         
-        $umbral = (int)($_GET['umbral_stock'] ?? 10);
+        $umbral = $this->request->query('umbral_stock', 10, 'int');
         $kpis = $productoModel->obtenerKPIsDashboard($this->userId, $umbral);
         
         $inicioMes = date('Y-m-01');
         $estadisticasVentas = $ventaModel->obtenerEstadisticasVentas($this->userId, $inicioMes);
         
-        $this->responder([
+        return $this->response->json([
             'success' => true,
             'data' => [
                 'inventario' => [
@@ -205,59 +142,24 @@ class ApiController {
         ]);
     }
     
-    /**
-     * GET /api/clientes
-     * Listar clientes
-     */
     public function clientes() {
         $this->setCorsHeaders();
-        
         $clienteModel = new Cliente();
         $clientes = $clienteModel->obtenerTodos($this->userId, '', true);
-        
-        $this->responder([
-            'success' => true,
-            'data' => $clientes
-        ]);
+        return $this->response->json(['success' => true, 'data' => $clientes]);
     }
     
-    /**
-     * GET /api/docs
-     * Documentación de la API
-     */
     public function docs() {
-        header('Content-Type: text/html; charset=utf-8');
-        include __DIR__ . '/../../views/api/docs.php';
-        exit;
+        return $this->response->view('api/docs', [], false);
     }
-    
-    // ==================== HELPERS ====================
     
     private function setCorsHeaders() {
         header('Access-Control-Allow-Origin: *');
         header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
         header('Access-Control-Allow-Headers: Content-Type, Authorization');
         
-        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-            http_response_code(200);
+        if ($this->request->method() === 'OPTIONS') {
             exit;
         }
-    }
-    
-    private function responder($data, $code = 200) {
-        http_response_code($code);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        exit;
-    }
-    
-    private function responderError($mensaje, $code = 400) {
-        $this->responder([
-            'success' => false,
-            'error' => [
-                'code' => $code,
-                'message' => $mensaje
-            ]
-        ], $code);
     }
 }
